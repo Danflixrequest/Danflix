@@ -15,7 +15,7 @@
       align-items: center;
     }
     #logo {
-      width: 450px;
+      width: 650px;
       height: auto; /* Keep proportions */
       margin-bottom: 1.5rem;
     }
@@ -55,11 +55,26 @@
     button:hover {
       background-color: #bf0810;
     }
+    .section-title {
+      font-size: 1.5rem;
+      margin-top: 2rem;
+      text-align: center;
+      font-weight: bold;
+      margin-bottom: 1rem;
+    }
   </style>
 </head>
 <body>
   <img id="logo" src="Danflix.png" alt="Danflix Logo" />
+  
+  <!-- Search bar -->
   <input id="searchInput" placeholder="Search for a movie title..." oninput="searchMovies()" />
+  
+  <!-- Random Movies Section -->
+  <div class="section-title">Movie Suggestions</div>
+  <div id="randomMovies"></div>
+
+  <!-- Search Results Section -->
   <div id="results"></div>
 
   <!-- Formspree Form -->
@@ -71,17 +86,65 @@
   </form>
 
   <script>
+    // Fetch random movies on page load
+    async function fetchRandomMovies() {
+      const container = document.getElementById("randomMovies");
+      container.innerHTML = "<p>Loading random movies...</p>";
+
+      try {
+        // Fetch a random movie (we can use different random search terms or genres)
+        const randomTerms = ['action', 'comedy', 'drama', 'adventure', 'thriller', 'romance'];
+        const randomTerm = randomTerms[Math.floor(Math.random() * randomTerms.length)];
+        const res = await fetch(`https://www.omdbapi.com/?s=${encodeURIComponent(randomTerm)}&apikey=d60f302b`);
+        const data = await res.json();
+
+        container.innerHTML = "";
+        
+        if (data.Search) {
+          // Show only the first 6 random movies
+          data.Search.slice(0, 6).forEach((movie) => {
+            const div = document.createElement("div");
+            div.className = "movie";
+            div.innerHTML = `
+              <img src="${movie.Poster !== "N/A" ? movie.Poster : 'https://via.placeholder.com/100x150'}" />
+              <div>
+                <h3>${movie.Title} (${movie.Year})</h3>
+                <p>${movie.Type}</p>
+                <button onclick='requestMovie(${JSON.stringify(movie)})'>Request</button>
+              </div>
+            `;
+            container.appendChild(div);
+          });
+        } else {
+          container.innerHTML = "<p>No random movies found.</p>";
+        }
+      } catch (err) {
+        console.error("Error fetching random movies:", err);
+        container.innerHTML = "<p>Failed to load random movies.</p>";
+      }
+    }
+
     async function searchMovies() {
       const query = document.getElementById("searchInput").value.trim();
-      if (!query) return;
+      const resultsContainer = document.getElementById("results");
+      const randomMoviesContainer = document.getElementById("randomMovies");
 
-      const container = document.getElementById("results");
-      container.innerHTML = "<p>Searching...</p>";
+      if (!query) {
+        // If no search query, show the random movies again
+        randomMoviesContainer.style.display = 'block';
+        resultsContainer.innerHTML = '';
+        fetchRandomMovies();
+        return;
+      }
+
+      // Hide the random movies section when searching
+      randomMoviesContainer.style.display = 'none';
+      resultsContainer.innerHTML = "<p>Searching...</p>";
 
       try {
         const res = await fetch(`https://www.omdbapi.com/?s=${encodeURIComponent(query)}&apikey=d60f302b`);
         const data = await res.json();
-        container.innerHTML = "";
+        resultsContainer.innerHTML = "";
 
         if (data.Search) {
           for (const movie of data.Search) {
@@ -98,19 +161,18 @@
                 <button onclick='requestMovie(${JSON.stringify(details)})'>Request</button>
               </div>
             `;
-            container.appendChild(div);
+            resultsContainer.appendChild(div);
           }
         } else {
-          container.innerHTML = "<p>No results found.</p>";
+          resultsContainer.innerHTML = "<p>No results found.</p>";
         }
       } catch (err) {
         console.error("Fetch error:", err);
-        container.innerHTML = "<p>Failed to fetch movie data.</p>";
+        resultsContainer.innerHTML = "<p>Failed to fetch movie data.</p>";
       }
     }
 
     function requestMovie(movie) {
-      // Set the movie details in the hidden form inputs
       document.getElementById("movieTitle").value = movie.Title;
       document.getElementById("movieYear").value = movie.Year;
       document.getElementById("movieID").value = movie.imdbID;
@@ -122,6 +184,9 @@
       // Show alert for confirmation
       alert(`Request submitted for "${movie.Title}"`);
     }
+
+    // Fetch random movies when the page loads
+    fetchRandomMovies();
   </script>
 </body>
 </html>
