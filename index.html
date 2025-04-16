@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Danflix - Movie Request</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <style>
     body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -15,7 +15,6 @@
       align-items: center;
     }
 
-    /* Blur everything except the overlay */
     body.blurred #pageContent {
       filter: blur(8px);
       pointer-events: none;
@@ -42,7 +41,6 @@
       border-radius: 10px;
       text-align: center;
       box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-      z-index: 10000;
     }
 
     .password-box input {
@@ -50,7 +48,6 @@
       font-size: 1rem;
       border: 1px solid #ccc;
       border-radius: 6px;
-      margin-top: 0.5rem;
       width: 100%;
       max-width: 300px;
     }
@@ -65,28 +62,20 @@
       cursor: pointer;
     }
 
-    .password-box button:hover {
-      background-color: #bf0810;
+    #logo {
+      width: 450px;
+      height: auto; /* Keep proportions */
+      margin-bottom: 1.5rem;
     }
 
-#logo {
-  width: 100%;
-  max-width: 700px;
-  height: auto;
-  margin-bottom: 1.5rem;
-  display: block;
-}
-
-
-input#searchInput {
-  padding: 12px;
-  font-size: 1rem;
-  width: 100%;
-  max-width: 700px;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  box-sizing: border-box;
-}
+    input#searchInput {
+      padding: 12px;
+      font-size: 1rem;
+      width: 100%;
+      max-width: 700px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+    }
 
     .movie {
       background: white;
@@ -125,7 +114,15 @@ input#searchInput {
       margin-top: 2rem;
       text-align: center;
       font-weight: bold;
-      margin-bottom: 1rem;
+    }
+
+    .highlight {
+      background-color: yellow;
+    }
+
+    .admin-link {
+      margin-top: 2rem;
+      font-size: 0.9rem;
     }
   </style>
 </head>
@@ -141,31 +138,23 @@ input#searchInput {
     </div>
   </div>
 
-  <!-- Main Content Wrapper -->
+  <!-- Page Content -->
   <div id="pageContent">
     <img id="logo" src="Danflix.png" alt="Danflix Logo" />
-
     <input id="searchInput" placeholder="Search for a movie title..." oninput="searchMovies()" />
-
     <div class="section-title">Movie Suggestions</div>
     <div id="randomMovies"></div>
-
     <div id="results"></div>
-
-    <form id="requestForm" method="POST" action="https://formspree.io/f/mwplyywr">
-      <input type="hidden" name="title" id="movieTitle" />
-      <input type="hidden" name="year" id="movieYear" />
-      <input type="hidden" name="imdbID" id="movieID" />
-      <input type="hidden" name="description" id="movieDescription" />
-    </form>
+    <div class="admin-link">
+      <a href="requests.html">Go to Requests</a>
+    </div>
   </div>
 
   <script>
-    const correctPassword = "danflix8866!"; // Change this password if needed
+    const correctPassword = "danflix8866!";
 
     function checkPassword() {
       const input = document.getElementById("pagePassword").value;
-
       if (input === correctPassword) {
         localStorage.setItem("unlocked", "true");
         unlockPage();
@@ -179,28 +168,29 @@ input#searchInput {
       document.body.classList.remove("blurred");
     }
 
-    // On load, check if previously unlocked
     window.onload = function () {
       if (localStorage.getItem("unlocked") === "true") {
         unlockPage();
       }
-
       fetchRandomMovies();
     };
 
-    // Fetch random movies on page load
+    function highlightMatch(title) {
+      const searchTerm = document.getElementById("searchInput").value.trim();
+      if (!searchTerm) return title;
+      const regex = new RegExp(`(${searchTerm})`, "gi");
+      return title.replace(regex, `<span class="highlight">$1</span>`);
+    }
+
     async function fetchRandomMovies() {
       const container = document.getElementById("randomMovies");
       container.innerHTML = "<p>Loading random movies...</p>";
-
       try {
-        const randomTerms = ['action', 'comedy', 'drama', 'adventure', 'thriller', 'romance'];
-        const randomTerm = randomTerms[Math.floor(Math.random() * randomTerms.length)];
-        const res = await fetch(`https://www.omdbapi.com/?s=${encodeURIComponent(randomTerm)}&apikey=d60f302b`);
+        const randomTerms = ['action', 'comedy', 'drama', 'thriller', 'romance'];
+        const term = randomTerms[Math.floor(Math.random() * randomTerms.length)];
+        const res = await fetch(`https://www.omdbapi.com/?s=${term}&apikey=d60f302b`);
         const data = await res.json();
-
         container.innerHTML = "";
-
         if (data.Search) {
           data.Search.slice(0, 6).forEach((movie) => {
             const div = document.createElement("div");
@@ -208,37 +198,34 @@ input#searchInput {
             div.innerHTML = `
               <img src="${movie.Poster !== "N/A" ? movie.Poster : 'https://via.placeholder.com/100x150'}" />
               <div>
-                <h3>${movie.Title} (${movie.Year})</h3>
+                <h3>${highlightMatch(movie.Title)} (${movie.Year})</h3>
                 <p>${movie.Type}</p>
                 <button onclick='requestMovie(${JSON.stringify(movie)})'>Request</button>
-              </div>
-            `;
+              </div>`;
             container.appendChild(div);
           });
         } else {
           container.innerHTML = "<p>No random movies found.</p>";
         }
-      } catch (err) {
-        console.error("Error fetching random movies:", err);
-        container.innerHTML = "<p>Failed to load random movies.</p>";
+      } catch {
+        container.innerHTML = "<p>Error loading movies.</p>";
       }
     }
 
     async function searchMovies() {
       const query = document.getElementById("searchInput").value.trim();
       const resultsContainer = document.getElementById("results");
-      const randomMoviesContainer = document.getElementById("randomMovies");
+      const randomMovies = document.getElementById("randomMovies");
 
       if (!query) {
-        randomMoviesContainer.style.display = 'block';
+        randomMovies.style.display = 'block';
         resultsContainer.innerHTML = '';
         fetchRandomMovies();
         return;
       }
 
-      randomMoviesContainer.style.display = 'none';
+      randomMovies.style.display = 'none';
       resultsContainer.innerHTML = "<p>Searching...</p>";
-
       try {
         const res = await fetch(`https://www.omdbapi.com/?s=${encodeURIComponent(query)}&apikey=d60f302b`);
         const data = await res.json();
@@ -246,38 +233,38 @@ input#searchInput {
 
         if (data.Search) {
           for (const movie of data.Search) {
-            const detailRes = await fetch(`https://www.omdbapi.com/?i=${movie.imdbID}&apikey=d60f302b`);
-            const details = await detailRes.json();
-
+            const detail = await fetch(`https://www.omdbapi.com/?i=${movie.imdbID}&apikey=d60f302b`);
+            const info = await detail.json();
             const div = document.createElement("div");
             div.className = "movie";
             div.innerHTML = `
-              <img src="${movie.Poster !== "N/A" ? movie.Poster : 'https://via.placeholder.com/100x150'}" />
+              <img src="${info.Poster !== "N/A" ? info.Poster : 'https://via.placeholder.com/100x150'}" />
               <div>
-                <h3>${movie.Title} (${movie.Year})</h3>
-                <p>${details.Plot || "No description available."}</p>
-                <button onclick='requestMovie(${JSON.stringify(details)})'>Request</button>
-              </div>
-            `;
+                <h3>${highlightMatch(info.Title)} (${info.Year})</h3>
+                <p>${info.Plot || "No description available."}</p>
+                <button onclick='requestMovie(${JSON.stringify(info)})'>Request</button>
+              </div>`;
             resultsContainer.appendChild(div);
           }
         } else {
           resultsContainer.innerHTML = "<p>No results found.</p>";
         }
-      } catch (err) {
-        console.error("Fetch error:", err);
-        resultsContainer.innerHTML = "<p>Failed to fetch movie data.</p>";
+      } catch {
+        resultsContainer.innerHTML = "<p>Search error.</p>";
       }
     }
 
     function requestMovie(movie) {
-      document.getElementById("movieTitle").value = movie.Title;
-      document.getElementById("movieYear").value = movie.Year;
-      document.getElementById("movieID").value = movie.imdbID;
-      document.getElementById("movieDescription").value = movie.Plot || "No description provided";
-
-      document.getElementById("requestForm").submit();
-      alert(`Request submitted for "${movie.Title}"`);
+      const existing = JSON.parse(localStorage.getItem("requests") || "[]");
+      existing.push({
+        title: movie.Title,
+        year: movie.Year,
+        imdbID: movie.imdbID,
+        description: movie.Plot || "No description provided",
+        poster: movie.Poster
+      });
+      localStorage.setItem("requests", JSON.stringify(existing));
+      alert(`Danflix Thanks you, Allow 24-48 hours for "${movie.Title}"`);
     }
   </script>
 </body>
