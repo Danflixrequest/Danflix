@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <title>Danflix - Movie Request</title>
-<link rel="icon" href="Logo.png" type="image/png">
+  <link rel="icon" href="Logo.png" type="image/png">
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <style>
     body {
@@ -15,13 +15,11 @@
       flex-direction: column;
       align-items: center;
     }
-
     body.blurred #pageContent {
       filter: blur(8px);
       pointer-events: none;
       user-select: none;
     }
-
     #passwordOverlay {
       position: fixed;
       top: 0;
@@ -35,7 +33,6 @@
       justify-content: center;
       align-items: center;
     }
-
     .password-box {
       background: white;
       padding: 2rem;
@@ -43,7 +40,6 @@
       text-align: center;
       box-shadow: 0 4px 12px rgba(0,0,0,0.2);
     }
-
     .password-box input {
       padding: 10px;
       font-size: 1rem;
@@ -52,7 +48,6 @@
       width: 100%;
       max-width: 300px;
     }
-
     .password-box button {
       margin-top: 1rem;
       padding: 10px 20px;
@@ -62,13 +57,11 @@
       border-radius: 6px;
       cursor: pointer;
     }
-
     #logo {
       width: 750px;
-      height: auto; /* Keep proportions */
+      height: auto;
       margin-bottom: 1.5rem;
     }
-
     input#searchInput {
       padding: 12px;
       font-size: 1rem;
@@ -77,7 +70,6 @@
       border: 1px solid #ccc;
       border-radius: 8px;
     }
-
     .movie {
       background: white;
       border-radius: 8px;
@@ -89,13 +81,11 @@
       margin-top: 1rem;
       box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     }
-
     img {
       width: 100px;
       height: auto;
       border-radius: 4px;
     }
-
     button {
       padding: 10px 20px;
       margin-top: 10px;
@@ -105,22 +95,23 @@
       border-radius: 6px;
       cursor: pointer;
     }
-
     button:hover {
       background-color: #bf0810;
     }
-
+    button:disabled {
+      background-color: #cccccc;
+      color: #666666;
+      cursor: not-allowed;
+    }
     .section-title {
       font-size: 1.5rem;
       margin-top: 2rem;
       text-align: center;
       font-weight: bold;
     }
-
     .highlight {
       background-color: yellow;
     }
-
     .admin-link {
       margin-top: 2rem;
       font-size: 0.9rem;
@@ -154,7 +145,6 @@
   <script>
     // Password unlock logic
     const correctPassword = "danflix123";
-
     function checkPassword() {
       const input = document.getElementById("pagePassword").value;
       if (input === correctPassword) {
@@ -164,18 +154,10 @@
         document.getElementById("passwordError").style.display = "block";
       }
     }
-
     function unlockPage() {
       document.getElementById("passwordOverlay").style.display = "none";
       document.body.classList.remove("blurred");
     }
-
-    window.onload = function () {
-      if (localStorage.getItem("unlocked") === "true") {
-        unlockPage();
-      }
-      fetchRandomMovies();
-    };
 
     function highlightMatch(title) {
       const searchTerm = document.getElementById("searchInput").value.trim();
@@ -189,6 +171,47 @@
     const SUPABASE_URL = 'https://vthwucdhiuewqfljbafu.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ0aHd1Y2RoaXVld3FmbGpiYWZ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU2MDY3NjYsImV4cCI6MjA3MTE4Mjc2Nn0.JaLXafZhYMYQwjuZErwrGph080jWYqOXhkpjRRP9gg0';
 
+    // Plex credentials (replace with your actual values)
+    const PLEX_TOKEN = 'DL4YUsSexDnYPyGCwBQz';
+    const PLEX_SERVER = 'http://86.174.75.253:32400';
+    const PLEX_LIBRARY_SECTION_IDS = ['1', '2', '3', '4'];
+
+    let plexTitles = [];
+
+    async function fetchPlexTitles() {
+      plexTitles = [];
+      for (const sectionId of PLEX_LIBRARY_SECTION_IDS) {
+        try {
+          const res = await fetch(
+            `${PLEX_SERVER}/library/sections/${sectionId}/all?X-Plex-Token=${PLEX_TOKEN}`,
+            {
+              headers: { 'Accept': 'application/xml' }
+            }
+          );
+          const text = await res.text();
+          const parser = new DOMParser();
+          const xml = parser.parseFromString(text, "text/xml");
+          const movies = xml.querySelectorAll('Video');
+          plexTitles.push(...Array.from(movies).map(movie => movie.getAttribute('title').toLowerCase()));
+        } catch (err) {
+          console.warn(`Could not fetch Plex titles for section ${sectionId}:`, err);
+        }
+      }
+      plexTitles = [...new Set(plexTitles)];
+    }
+
+    function isOnPlex(title) {
+      return plexTitles.includes(title.toLowerCase());
+    }
+
+    window.onload = async function () {
+      if (localStorage.getItem("unlocked") === "true") {
+        unlockPage();
+      }
+      await fetchPlexTitles();
+      fetchRandomMovies();
+    };
+
     async function fetchRandomMovies() {
       const container = document.getElementById("randomMovies");
       container.innerHTML = "<p>Loading random movies...</p>";
@@ -200,6 +223,7 @@
         container.innerHTML = "";
         if (data.Search) {
           data.Search.slice(0, 6).forEach((movie) => {
+            const alreadyOnPlex = isOnPlex(movie.Title);
             const div = document.createElement("div");
             div.className = "movie";
             div.innerHTML = `
@@ -207,7 +231,9 @@
               <div>
                 <h3>${highlightMatch(movie.Title)} (${movie.Year})</h3>
                 <p>${movie.Type}</p>
-                <button onclick='requestMovie(${JSON.stringify(movie)})'>Request</button>
+                <button ${alreadyOnPlex ? "disabled" : `onclick='requestMovie(${JSON.stringify(movie)})'`}>
+                  ${alreadyOnPlex ? "On DanFlix" : "Request"}
+                </button>
               </div>`;
             container.appendChild(div);
           });
@@ -242,6 +268,7 @@
           for (const movie of data.Search) {
             const detail = await fetch(`https://www.omdbapi.com/?i=${movie.imdbID}&apikey=${OMDB_API_KEY}`);
             const info = await detail.json();
+            const alreadyOnPlex = isOnPlex(info.Title);
             const div = document.createElement("div");
             div.className = "movie";
             div.innerHTML = `
@@ -249,7 +276,9 @@
               <div>
                 <h3>${highlightMatch(info.Title)} (${info.Year})</h3>
                 <p>${info.Plot || "No description available."}</p>
-                <button onclick='requestMovie(${JSON.stringify(info)})'>Request</button>
+                <button ${alreadyOnPlex ? "disabled" : `onclick='requestMovie(${JSON.stringify(info)})'`}>
+                  ${alreadyOnPlex ? "On DanFlix" : "Request"}
+                </button>
               </div>`;
             resultsContainer.appendChild(div);
           }
@@ -262,25 +291,31 @@
     }
 
     async function requestMovie(movie) {
+      if (isOnPlex(movie.Title)) {
+        alert(`"${movie.Title}" is already on Danflix!`);
+        return;
+      }
       const res = await fetch(`${SUPABASE_URL}/rest/v1/requests`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "apikey": SUPABASE_KEY,
-          "Authorization": `Bearer ${SUPABASE_KEY}`
+          "Authorization": `Bearer ${SUPABASE_KEY}`,
+          "Prefer": "return=representation"
         },
-        body: JSON.stringify({
+        body: JSON.stringify([{
           title: movie.Title,
           year: movie.Year,
           imdbID: movie.imdbID,
           description: movie.Plot || "No description provided",
           poster: movie.Poster
-        })
+        }])
       });
+      const text = await res.text();
       if (res.ok) {
         alert(`Danflix Thanks you, Allow 24-48 hours for "${movie.Title}"`);
       } else {
-        alert("Error submitting request.");
+        alert("Error submitting request: " + text);
       }
     }
   </script>
