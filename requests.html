@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Requested Movies</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 2rem;
+      background: #f4f4f4;
+    }
+
+    .movie {
+      background: white;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      border-radius: 8px;
+      display: flex;
+      gap: 1rem;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+
+    img {
+      width: 100px;
+      height: auto;
+      border-radius: 6px;
+    }
+
+    button {
+      margin-top: 10px;
+      padding: 6px 12px;
+      background: #e50914;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #bf0810;
+    }
+
+    #passwordPrompt {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      backdrop-filter: blur(6px);
+      background-color: rgba(0,0,0,0.5);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .password-box {
+      background: white;
+      padding: 2rem;
+      border-radius: 10px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div id="passwordPrompt">
+    <div class="password-box">
+      <h2>Admin Access</h2>
+      <input type="password" id="adminPass" placeholder="Password" />
+      <br />
+      <button onclick="verifyAccess()">Enter</button>
+      <p id="error" style="color: red; display: none;">Incorrect password</p>
+    </div>
+  </div>
+
+  <h1>Requested Movies</h1>
+  <div id="movieList"></div>
+
+  <script>
+    // Use your Supabase credentials here
+    const SUPABASE_URL = 'https://vthwucdhiuewqfljbafu.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ0aHd1Y2RoaXVld3FmbGpiYWZ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU2MDY3NjYsImV4cCI6MjA3MTE4Mjc2Nn0.JaLXafZhYMYQwjuZErwrGph080jWYqOXhkpjRRP9gg0';
+    const adminPassword = "danflix123";
+
+    function verifyAccess() {
+      const input = document.getElementById("adminPass").value;
+      if (input === adminPassword) {
+        document.getElementById("passwordPrompt").style.display = "none";
+        loadRequests();
+      } else {
+        document.getElementById("error").style.display = "block";
+      }
+    }
+
+    async function loadRequests() {
+      const list = document.getElementById("movieList");
+      list.innerHTML = "<p>Loading...</p>";
+      try {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/requests?select=*`, {
+          headers: {
+            "apikey": SUPABASE_KEY,
+            "Authorization": `Bearer ${SUPABASE_KEY}`
+          }
+        });
+        const requests = await res.json();
+        list.innerHTML = '';
+        if (!requests.length) {
+          list.innerHTML = "<p>No movie requests yet.</p>";
+          return;
+        }
+        requests.forEach((movie) => {
+          const div = document.createElement("div");
+          div.className = "movie";
+          div.innerHTML = `
+            <img src="${movie.poster !== "N/A" ? movie.poster : 'https://via.placeholder.com/100x150'}" alt="${movie.title}" />
+            <div>
+              <h3>${movie.title} (${movie.year})</h3>
+              <p>${movie.description}</p>
+              <button onclick="deleteRequest(${movie.id}, '${movie.title.replace(/'/g, "\\'")}')">Delete</button>
+            </div>
+          `;
+          list.appendChild(div);
+        });
+      } catch (err) {
+        list.innerHTML = "<p>Error loading requests.</p>";
+      }
+    }
+
+    async function deleteRequest(id, title) {
+      if (confirm(`Are you sure you want to delete "${title}"?`)) {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/requests?id=eq.${id}`, {
+          method: "DELETE",
+          headers: {
+            "apikey": SUPABASE_KEY,
+            "Authorization": `Bearer ${SUPABASE_KEY}`
+          }
+        });
+        if (res.ok) {
+          loadRequests();
+        } else {
+          alert("Error deleting request.");
+        }
+      }
+    }
+
+    // Optional: Allow pressing Enter to submit password
+    document.getElementById("adminPass").addEventListener("keyup", function(event) {
+      if (event.key === "Enter") {
+        verifyAccess();
+      }
+    });
+  </script>
+</body>
+</html>
