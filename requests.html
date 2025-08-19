@@ -9,7 +9,6 @@
       padding: 2rem;
       background: #f4f4f4;
     }
-
     .movie {
       background: white;
       padding: 1rem;
@@ -19,13 +18,11 @@
       gap: 1rem;
       box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     }
-
     img {
       width: 100px;
       height: auto;
       border-radius: 6px;
     }
-
     button {
       margin-top: 10px;
       padding: 6px 12px;
@@ -35,11 +32,9 @@
       border-radius: 6px;
       cursor: pointer;
     }
-
     button:hover {
       background-color: #bf0810;
     }
-
     #passwordPrompt {
       position: fixed;
       top: 0;
@@ -52,12 +47,18 @@
       justify-content: center;
       align-items: center;
     }
-
     .password-box {
       background: white;
       padding: 2rem;
       border-radius: 10px;
       text-align: center;
+    }
+    .email-label {
+      color: #e50914;
+      font-weight: bold;
+      font-size: 1.05em;
+      margin-bottom: 0.5em;
+      display: block;
     }
   </style>
 </head>
@@ -76,7 +77,6 @@
   <div id="movieList"></div>
 
   <script>
-    // Use your Supabase credentials here
     const SUPABASE_URL = 'https://vthwucdhiuewqfljbafu.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ0aHd1Y2RoaXVld3FmbGpiYWZ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU2MDY3NjYsImV4cCI6MjA3MTE4Mjc2Nn0.JaLXafZhYMYQwjuZErwrGph080jWYqOXhkpjRRP9gg0';
     const adminPassword = "danflix123";
@@ -108,11 +108,15 @@
           return;
         }
         requests.forEach((movie) => {
+          const emailLabel = movie.user_email
+            ? `<span class="email-label">Requested by: ${movie.user_email}</span>`
+            : `<span class="email-label" style="color:gray;">Requested by: Unknown</span>`;
           const div = document.createElement("div");
           div.className = "movie";
           div.innerHTML = `
             <img src="${movie.poster !== "N/A" ? movie.poster : 'https://via.placeholder.com/100x150'}" alt="${movie.title}" />
             <div>
+              ${emailLabel}
               <h3>${movie.title} (${movie.year})</h3>
               <p>${movie.description}</p>
               <button onclick="deleteRequest(${movie.id}, '${movie.title.replace(/'/g, "\\'")}')">Delete</button>
