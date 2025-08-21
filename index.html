@@ -252,17 +252,12 @@
   // OMDb API
   const OMDB_API_KEY = 'd60f302b';
 
-  // Plex credentials
-  const PLEX_TOKEN = 'DL4YUsSexDnYPyGCwBQz';
-  const PLEX_SERVER = 'http://86.174.75.253:32400';
-  const PLEX_LIBRARY_SECTION_IDS = ['1', '2', '3', '4'];
-
-  let plexTitles = [];
-  let plexReady = false;
-
   // Ratings Icons
   const IMDB_ICON = 'https://upload.wikimedia.org/wikipedia/commons/6/69/IMDB_Logo_2016.svg';
   const RT_ICON = 'https://upload.wikimedia.org/wikipedia/commons/5/5b/Rotten_Tomatoes.svg';
+
+  let plexTitles = [];
+  let plexReady = false;
 
   // Auth overlay UI switching
   function showSignup() {
@@ -336,7 +331,7 @@
     document.body.classList.remove('blurred');
   }
 
-  // Movie logic
+  // Highlight search matches
   function highlightMatch(title) {
     const searchTerm = document.getElementById("searchInput").value.trim();
     if (!searchTerm) return title;
@@ -344,36 +339,24 @@
     return title.replace(regex, `<span class="highlight">$1</span>`);
   }
 
+  // Fetch plex_titles.json instead of Plex server directly
   async function fetchPlexTitles() {
-    plexTitles = [];
-    let anyError = false;
-    for (const sectionId of PLEX_LIBRARY_SECTION_IDS) {
-      try {
-        const res = await fetch(
-          `${PLEX_SERVER}/library/sections/${sectionId}/all?X-Plex-Token=${PLEX_TOKEN}`,
-          { headers: { 'Accept': 'application/xml' } }
-        );
-        const text = await res.text();
-        const parser = new DOMParser();
-        const xml = parser.parseFromString(text, "text/xml");
-        const movies = xml.querySelectorAll('Video');
-        plexTitles.push(...Array.from(movies).map(movie => movie.getAttribute('title').toLowerCase()));
-      } catch (err) {
-        anyError = true;
-        console.warn(`Could not fetch Plex titles for section ${sectionId}:`, err);
-      }
-    }
-    plexTitles = [...new Set(plexTitles)];
-    plexReady = true;
-    if (anyError && plexTitles.length === 0) {
-      alert("Warning: Plex may be offline or empty. 'On Danflix' status may not be accurate.");
+    try {
+      const res = await fetch("plex_titles.json");
+      plexTitles = await res.json();
+      plexTitles = plexTitles.map(title => title.toLowerCase());
+      plexReady = true;
+    } catch (err) {
+      plexReady = true;
+      alert("Could not load Plex titles list. 'On Danflix' status may not be accurate.");
     }
   }
   function isOnPlex(title) {
-    if (!plexReady) return false; // Defensive: never claim it's on Plex before we're ready!
+    if (!plexReady) return false;
     return plexTitles.includes(title.toLowerCase());
   }
 
+  // Random movie suggestions
   async function fetchRandomMovies() {
     const container = document.getElementById("randomMovies");
     if (!plexReady) {
@@ -390,12 +373,10 @@
       if (data.Response === "True" && data.Search) {
         for (const movie of data.Search.slice(0, 6)) {
           if (!movie.imdbID) continue;
-          // Fetch details for scores
           const detail = await fetch(`https://www.omdbapi.com/?i=${movie.imdbID}&apikey=${OMDB_API_KEY}`);
           const info = await detail.json();
           const alreadyOnPlex = isOnPlex(info.Title);
 
-          // Scores
           const imdbRating = info.imdbRating ? info.imdbRating : "N/A";
           let rtRating = "N/A";
           if (info.Ratings) {
@@ -427,7 +408,7 @@
     }
   }
 
-  // IMPROVED SEARCH FILTER + RATINGS + ICONS
+  // Search movies
   async function searchMovies() {
     const query = document.getElementById("searchInput").value.trim();
     const resultsContainer = document.getElementById("results");
@@ -447,13 +428,11 @@
     randomMovies.style.display = 'none';
     resultsContainer.innerHTML = "<p>Searching...</p>";
     try {
-      // Use OMDb API search, but filter out unrelated titles
       const res = await fetch(`https://www.omdbapi.com/?s=${encodeURIComponent(query)}&apikey=${OMDB_API_KEY}`);
       const data = await res.json();
       resultsContainer.innerHTML = "";
 
       if (data.Response === "True" && data.Search) {
-        // Improved filtering: prefer exact match, then whole word, then close matches
         const normalizedQuery = query.trim().toLowerCase();
         const exactMatches = [];
         const wordMatches = [];
@@ -482,7 +461,6 @@
           const info = await detail.json();
           const alreadyOnPlex = isOnPlex(info.Title);
 
-          // Scores
           const imdbRating = info.imdbRating ? info.imdbRating : "N/A";
           let rtRating = "N/A";
           if (info.Ratings) {
@@ -516,7 +494,6 @@
   }
 
   async function requestMovie(movie) {
-    // Only allow logged in users
     const user = await getCurrentUser();
     if (!user) {
       alert("Please log in to request a movie.");
@@ -566,7 +543,7 @@
     } else {
       showAuthOverlay();
     }
-    await fetchPlexTitles(); // Wait for Plex before showing movies/search
+    await fetchPlexTitles(); // Wait for Plex titles to load from JSON
     fetchRandomMovies();
   };
 </script>
