@@ -170,6 +170,31 @@
         width: 95vw;
       }
     }
+    .ratings {
+      font-size: 0.97rem;
+      color: #444;
+      margin: 0.4em 0 0.4em 0;
+      display: flex;
+      gap: 1.2em;
+      align-items: center;
+    }
+    .ratings .score {
+      font-weight: bold;
+      color: #e50914;
+      margin-right: 6px;
+      display: flex;
+      align-items: center;
+      gap: 0.2em;
+    }
+    .ratings img {
+      vertical-align: middle;
+      width: 20px;
+      height: 20px;
+      margin-right: 3px;
+      border-radius: 0;
+      box-shadow: none;
+      background: none;
+    }
   </style>
 </head>
 <body class="blurred">
@@ -234,6 +259,10 @@
 
   let plexTitles = [];
   let plexReady = false;
+
+  // Ratings Icons
+  const IMDB_ICON = 'https://upload.wikimedia.org/wikipedia/commons/6/69/IMDB_Logo_2016.svg';
+  const RT_ICON = 'https://upload.wikimedia.org/wikipedia/commons/5/5b/Rotten_Tomatoes.svg';
 
   // Auth overlay UI switching
   function showSignup() {
@@ -359,21 +388,37 @@
       const data = await res.json();
       container.innerHTML = "";
       if (data.Response === "True" && data.Search) {
-        data.Search.slice(0, 6).forEach((movie) => {
-          const alreadyOnPlex = isOnPlex(movie.Title);
+        for (const movie of data.Search.slice(0, 6)) {
+          if (!movie.imdbID) continue;
+          // Fetch details for scores
+          const detail = await fetch(`https://www.omdbapi.com/?i=${movie.imdbID}&apikey=${OMDB_API_KEY}`);
+          const info = await detail.json();
+          const alreadyOnPlex = isOnPlex(info.Title);
+
+          // Scores
+          const imdbRating = info.imdbRating ? info.imdbRating : "N/A";
+          let rtRating = "N/A";
+          if (info.Ratings) {
+            const rtObj = info.Ratings.find(r => r.Source === "Rotten Tomatoes");
+            rtRating = rtObj ? rtObj.Value : "N/A";
+          }
           const div = document.createElement("div");
           div.className = "movie";
           div.innerHTML = `
-            <img src="${movie.Poster !== "N/A" ? movie.Poster : 'https://via.placeholder.com/100x150'}" />
+            <img src="${info.Poster !== "N/A" ? info.Poster : 'https://via.placeholder.com/100x150'}" />
             <div>
-              <h3>${highlightMatch(movie.Title)} (${movie.Year})</h3>
-              <p>${movie.Type}</p>
-              <button ${alreadyOnPlex ? "disabled" : `onclick='requestMovie(${JSON.stringify(movie)})'`}>
+              <h3>${highlightMatch(info.Title)} (${info.Year})</h3>
+              <div class="ratings">
+                <span class="score"><img src="${IMDB_ICON}" alt="IMDb" title="IMDb" />${imdbRating}</span>
+                <span class="score"><img src="${RT_ICON}" alt="Rotten Tomatoes" title="Rotten Tomatoes" />${rtRating}</span>
+              </div>
+              <p>${info.Type}</p>
+              <button ${alreadyOnPlex ? "disabled" : `onclick='requestMovie(${JSON.stringify(info)})'`}>
                 ${alreadyOnPlex ? "On DanFlix" : "Request"}
               </button>
             </div>`;
           container.appendChild(div);
-        });
+        }
       } else {
         container.innerHTML = "<p>No random movies found.</p>";
       }
@@ -382,6 +427,7 @@
     }
   }
 
+  // IMPROVED SEARCH FILTER + RATINGS + ICONS
   async function searchMovies() {
     const query = document.getElementById("searchInput").value.trim();
     const resultsContainer = document.getElementById("results");
@@ -401,23 +447,59 @@
     randomMovies.style.display = 'none';
     resultsContainer.innerHTML = "<p>Searching...</p>";
     try {
+      // Use OMDb API search, but filter out unrelated titles
       const res = await fetch(`https://www.omdbapi.com/?s=${encodeURIComponent(query)}&apikey=${OMDB_API_KEY}`);
       const data = await res.json();
       resultsContainer.innerHTML = "";
 
       if (data.Response === "True" && data.Search) {
+        // Improved filtering: prefer exact match, then whole word, then close matches
+        const normalizedQuery = query.trim().toLowerCase();
+        const exactMatches = [];
+        const wordMatches = [];
+        const others = [];
+
         for (const movie of data.Search) {
-          // Defensive: Some OMDb results lack imdbID
-          if (!movie.imdbID) continue;
+          if (!movie.imdbID || !movie.Title) continue;
+          const normalizedTitle = movie.Title.trim().toLowerCase();
+          if (normalizedTitle === normalizedQuery) {
+            exactMatches.push(movie);
+          } else if (new RegExp(`\\b${normalizedQuery}\\b`, "i").test(movie.Title)) {
+            wordMatches.push(movie);
+          } else {
+            others.push(movie);
+          }
+        }
+
+        let displayMovies = [...exactMatches, ...wordMatches];
+        if (displayMovies.length === 0) {
+          resultsContainer.innerHTML = "<p>No exact matches found. Showing suggestions:</p>";
+          displayMovies = others;
+        }
+
+        for (const movie of displayMovies) {
           const detail = await fetch(`https://www.omdbapi.com/?i=${movie.imdbID}&apikey=${OMDB_API_KEY}`);
           const info = await detail.json();
           const alreadyOnPlex = isOnPlex(info.Title);
+
+          // Scores
+          const imdbRating = info.imdbRating ? info.imdbRating : "N/A";
+          let rtRating = "N/A";
+          if (info.Ratings) {
+            const rtObj = info.Ratings.find(r => r.Source === "Rotten Tomatoes");
+            rtRating = rtObj ? rtObj.Value : "N/A";
+          }
+
           const div = document.createElement("div");
           div.className = "movie";
           div.innerHTML = `
             <img src="${info.Poster !== "N/A" ? info.Poster : 'https://via.placeholder.com/100x150'}" />
             <div>
               <h3>${highlightMatch(info.Title)} (${info.Year})</h3>
+              <div class="ratings">
+                <span class="score"><img src="${IMDB_ICON}" alt="IMDb" title="IMDb" />${imdbRating}</span>
+                <span class="score"><img src="${RT_ICON}" alt="Rotten Tomatoes" title="Rotten Tomatoes" />${rtRating}</span>
+              </div>
               <p>${info.Plot || "No description available."}</p>
               <button ${alreadyOnPlex ? "disabled" : `onclick='requestMovie(${JSON.stringify(info)})'`}>
                 ${alreadyOnPlex ? "On DanFlix" : "Request"}
