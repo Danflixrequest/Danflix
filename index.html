@@ -39,15 +39,11 @@
       text-align: center;
       box-shadow: 0 4px 16px rgba(0,0,0,0.2);
       min-width: 320px;
-      max-width: 95vw;
+      max-width: 350px;
+      width: 100%;
       display: flex;
       flex-direction: column;
       align-items: center;
-    }
-    .auth-box img {
-      width: 220px;
-      height: auto;
-      margin-bottom: 1rem;
     }
     .auth-box input {
       padding: 10px;
@@ -55,8 +51,17 @@
       border: 1px solid #ccc;
       border-radius: 6px;
       width: 100%;
-      max-width: 300px;
+      box-sizing: border-box;
       margin-bottom: 0.6rem;
+      max-width: 300px;
+      display: block;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .auth-box img {
+      width: 220px;
+      height: auto;
+      margin-bottom: 1rem;
     }
     .auth-box button {
       margin-top: 0.2rem;
@@ -228,6 +233,7 @@
   const PLEX_LIBRARY_SECTION_IDS = ['1', '2', '3', '4'];
 
   let plexTitles = [];
+  let plexReady = false;
 
   // Auth overlay UI switching
   function showSignup() {
@@ -311,6 +317,7 @@
 
   async function fetchPlexTitles() {
     plexTitles = [];
+    let anyError = false;
     for (const sectionId of PLEX_LIBRARY_SECTION_IDS) {
       try {
         const res = await fetch(
@@ -323,17 +330,27 @@
         const movies = xml.querySelectorAll('Video');
         plexTitles.push(...Array.from(movies).map(movie => movie.getAttribute('title').toLowerCase()));
       } catch (err) {
+        anyError = true;
         console.warn(`Could not fetch Plex titles for section ${sectionId}:`, err);
       }
     }
     plexTitles = [...new Set(plexTitles)];
+    plexReady = true;
+    if (anyError && plexTitles.length === 0) {
+      alert("Warning: Plex may be offline or empty. 'On Danflix' status may not be accurate.");
+    }
   }
   function isOnPlex(title) {
+    if (!plexReady) return false; // Defensive: never claim it's on Plex before we're ready!
     return plexTitles.includes(title.toLowerCase());
   }
 
   async function fetchRandomMovies() {
     const container = document.getElementById("randomMovies");
+    if (!plexReady) {
+      container.innerHTML = "<p>Waiting for Plex titles...</p>";
+      return;
+    }
     container.innerHTML = "<p>Loading random movies...</p>";
     try {
       const randomTerms = ['action', 'comedy', 'drama', 'thriller', 'romance'];
@@ -341,7 +358,7 @@
       const res = await fetch(`https://www.omdbapi.com/?s=${term}&apikey=${OMDB_API_KEY}`);
       const data = await res.json();
       container.innerHTML = "";
-      if (data.Search) {
+      if (data.Response === "True" && data.Search) {
         data.Search.slice(0, 6).forEach((movie) => {
           const alreadyOnPlex = isOnPlex(movie.Title);
           const div = document.createElement("div");
@@ -360,7 +377,7 @@
       } else {
         container.innerHTML = "<p>No random movies found.</p>";
       }
-    } catch {
+    } catch (err) {
       container.innerHTML = "<p>Error loading movies.</p>";
     }
   }
@@ -369,6 +386,11 @@
     const query = document.getElementById("searchInput").value.trim();
     const resultsContainer = document.getElementById("results");
     const randomMovies = document.getElementById("randomMovies");
+
+    if (!plexReady) {
+      resultsContainer.innerHTML = "<p>Waiting for Plex titles...</p>";
+      return;
+    }
 
     if (!query) {
       randomMovies.style.display = 'block';
@@ -383,8 +405,10 @@
       const data = await res.json();
       resultsContainer.innerHTML = "";
 
-      if (data.Search) {
+      if (data.Response === "True" && data.Search) {
         for (const movie of data.Search) {
+          // Defensive: Some OMDb results lack imdbID
+          if (!movie.imdbID) continue;
           const detail = await fetch(`https://www.omdbapi.com/?i=${movie.imdbID}&apikey=${OMDB_API_KEY}`);
           const info = await detail.json();
           const alreadyOnPlex = isOnPlex(info.Title);
@@ -404,7 +428,7 @@
       } else {
         resultsContainer.innerHTML = "<p>No results found.</p>";
       }
-    } catch {
+    } catch (err) {
       resultsContainer.innerHTML = "<p>Search error.</p>";
     }
   }
@@ -415,6 +439,10 @@
     if (!user) {
       alert("Please log in to request a movie.");
       showAuthOverlay();
+      return;
+    }
+    if (!plexReady) {
+      alert("Please wait for Plex titles to load before requesting.");
       return;
     }
     if (isOnPlex(movie.Title)) {
@@ -432,7 +460,7 @@
       body: JSON.stringify([{
         title: movie.Title,
         year: movie.Year,
-        imdbID: movie.imdbID,
+        imdbID: movie.imdbID || "",
         description: movie.Plot || "No description provided",
         poster: movie.Poster,
         user_id: user.id,
@@ -447,9 +475,8 @@
     }
   }
 
-  // On page load, check auth and fetch Plex titles
+  // On page load, check auth and fetch Plex titles before showing movies
   window.onload = async function() {
-    // Auth logic
     const { data } = await supabase.auth.getUser();
     if (data?.user) {
       showUser(data.user);
@@ -457,7 +484,7 @@
     } else {
       showAuthOverlay();
     }
-    await fetchPlexTitles();
+    await fetchPlexTitles(); // Wait for Plex before showing movies/search
     fetchRandomMovies();
   };
 </script>
