@@ -2,140 +2,31 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Danflix - Movie Request</title>
-  <link rel="icon" href="Logo.png" type="image/png">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <title>Requested Movies</title>
   <style>
     body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background-color: #f4f4f4;
-      margin: 0;
+      font-family: sans-serif;
       padding: 2rem;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-    body.blurred #pageContent {
-      filter: blur(8px);
-      pointer-events: none;
-      user-select: none;
-    }
-    #authOverlay {
-      position: fixed;
-      top: 0; left: 0;
-      width: 100vw; height: 100vh;
-      backdrop-filter: blur(10px);
-      background-color: rgba(0,0,0,0.5);
-      z-index: 9999;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-    }
-    .auth-box {
-      background: white;
-      padding: 2rem 2.5rem;
-      border-radius: 10px;
-      text-align: center;
-      box-shadow: 0 4px 16px rgba(0,0,0,0.2);
-      min-width: 320px;
-      max-width: 350px;
-      width: 100%;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-    .auth-box input {
-      padding: 10px;
-      font-size: 1rem;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      width: 100%;
-      box-sizing: border-box;
-      margin-bottom: 0.6rem;
-      max-width: 300px;
-      display: block;
-      margin-left: auto;
-      margin-right: auto;
-    }
-    .auth-box img {
-      width: 220px;
-      height: auto;
-      margin-bottom: 1rem;
-    }
-    .auth-box button {
-      margin-top: 0.2rem;
-      padding: 10px 20px;
-      background-color: #e50914;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      font-weight: bold;
-    }
-    .auth-box button:hover {
-      background-color: #bf0810;
-    }
-    .auth-switch {
-      margin: 1rem 0 0.5rem 0;
-      font-size: 0.95rem;
-      color: #333;
-      cursor: pointer;
-      text-decoration: underline;
-    }
-    .auth-box p {
-      margin: 0.5rem 0 0 0;
-      color: red;
-      display: none;
-    }
-    #userWelcome {
-      margin-bottom: 2rem;
-      background: #fff;
-      border-radius: 10px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-      padding: 1rem;
-      width: 100%;
-      max-width: 400px;
-      text-align: center;
-    }
-    #logo {
-      width: 350px;
-      height: auto;
-      margin-bottom: 1.5rem;
-    }
-    input#searchInput {
-      display: block;
-      margin-left: auto;
-      margin-right: auto;
-      padding: 16px;
-      font-size: 1.2rem;
-      width: 96vw;
-      max-width: 350px;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-      box-sizing: border-box;
-      margin-bottom: 1vw;
+      background: #f4f4f4;
     }
     .movie {
       background: white;
-      border-radius: 8px;
       padding: 1rem;
+      margin-bottom: 1rem;
+      border-radius: 8px;
       display: flex;
       gap: 1rem;
-      width: 100%;
-      max-width: 350px;
-      margin-top: 1rem;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     }
-    img:not(.auth-logo) {
+    img {
       width: 100px;
       height: auto;
-      border-radius: 4px;
+      border-radius: 6px;
     }
     button {
-      padding: 10px 20px;
       margin-top: 10px;
-      background-color: #e50914;
+      padding: 6px 12px;
+      background: #e50914;
       color: white;
       border: none;
       border-radius: 6px;
@@ -144,408 +35,125 @@
     button:hover {
       background-color: #bf0810;
     }
-    button:disabled {
-      background-color: #cccccc;
-      color: #666666;
-      cursor: not-allowed;
+    #passwordPrompt {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      backdrop-filter: blur(6px);
+      background-color: rgba(0,0,0,0.5);
+      display: flex;
+      justify-content: center;
+      align-items: center;
     }
-    .section-title {
-      font-size: 1.5rem;
-      margin-top: 2rem;
+    .password-box {
+      background: white;
+      padding: 2rem;
+      border-radius: 10px;
       text-align: center;
-      font-weight: bold;
     }
-    .highlight {
-      background-color: yellow;
-    }
-    .admin-link {
-      margin-top: 2rem;
-      font-size: 0.9rem;
-    }
-    @media (max-width: 600px) {
-      .auth-box img {
-        width: 100px;
-      }
-      #logo {
-        width: 95vw;
-      }
-    }
-    .ratings {
-      font-size: 0.97rem;
-      color: #444;
-      margin: 0.4em 0 0.4em 0;
-      display: flex;
-      gap: 1.2em;
-      align-items: center;
-    }
-    .ratings .score {
-      font-weight: bold;
+    .email-label {
       color: #e50914;
-      margin-right: 6px;
-      display: flex;
-      align-items: center;
-      gap: 0.2em;
-    }
-    .ratings img {
-      vertical-align: middle;
-      width: 20px;
-      height: 20px;
-      margin-right: 3px;
-      border-radius: 0;
-      box-shadow: none;
-      background: none;
+      font-weight: bold;
+      font-size: 1.05em;
+      margin-bottom: 0.5em;
+      display: block;
     }
   </style>
 </head>
-<body class="blurred">
-
-  <!-- AUTH OVERLAY -->
-  <div id="authOverlay">
-    <div class="auth-box">
-      <img src="Danflix.png" alt="Danflix Logo" class="auth-logo"/>
-      <div id="authForms">
-        <!-- Login Form (default) -->
-        <div id="loginForm">
-          <h2>Login</h2>
-          <input type="email" id="loginEmail" placeholder="Email" autocomplete="username" />
-          <input type="password" id="loginPassword" placeholder="Password" autocomplete="current-password" />
-          <button onclick="login()">Log In</button>
-          <p id="loginError"></p>
-          <div class="auth-switch" onclick="showSignup()">No account? Sign Up</div>
-        </div>
-        <!-- Signup Form (hidden by default) -->
-        <div id="signupForm" style="display:none;">
-          <h2>Sign Up</h2>
-          <input type="email" id="signupEmail" placeholder="Email" autocomplete="username" />
-          <input type="password" id="signupPassword" placeholder="Password" autocomplete="new-password" />
-          <button onclick="signup()">Sign Up</button>
-          <p id="signupError"></p>
-          <div class="auth-switch" onclick="showLogin()">Have an account? Log In</div>
-        </div>
-      </div>
+<body>
+  <div id="passwordPrompt">
+    <div class="password-box">
+      <h2>Admin Access</h2>
+      <input type="password" id="adminPass" placeholder="Password" />
+      <br />
+      <button onclick="verifyAccess()">Enter</button>
+      <p id="error" style="color: red; display: none;">Incorrect password</p>
     </div>
   </div>
 
-  <!-- Welcome + Main Content -->
-  <div id="userWelcome" style="display:none;">
-    <span id="userEmail"></span>
-    <button onclick="logout()">Logout</button>
-  </div>
+  <h1>Requested Movies</h1>
+  <div id="movieList"></div>
 
-  <div id="pageContent">
-    <img id="logo" src="Danflix.png" alt="Danflix Logo" />
-    <input id="searchInput" placeholder="Search for a movie title..." oninput="searchMovies()" />
-    <div class="section-title">Movie Suggestions</div>
-    <div id="randomMovies"></div>
-    <div id="results"></div>
-    <div class="admin-link">
-      <a href="requests.html">Go to Admin (Requests)</a>
-    </div>
-  </div>
+  <script>
+    const SUPABASE_URL = 'https://vthwucdhiuewqfljbafu.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ0aHd1Y2RoaXVld3FmbGpiYWZ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU2MDY3NjYsImV4cCI6MjA3MTE4Mjc2Nn0.JaLXafZhYMYQwjuZErwrGph080jWYqOXhkpjRRP9gg0';
+    const adminPassword = "danflix123";
 
-<script>
-  // Supabase setup
-  const SUPABASE_URL = 'https://vthwucdhiuewqfljbafu.supabase.co';
-  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ0aHd1Y2RoaXVld3FmbGpiYWZ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU2MDY3NjYsImV4cCI6MjA3MTE4Mjc2Nn0.JaLXafZhYMYQwjuZErwrGph080jWYqOXhkpjRRP9gg0';
-  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-  // OMDb API
-  const OMDB_API_KEY = 'd60f302b';
-
-  // Ratings Icons
-  const IMDB_ICON = 'https://upload.wikimedia.org/wikipedia/commons/6/69/IMDB_Logo_2016.svg';
-  const RT_ICON = 'https://upload.wikimedia.org/wikipedia/commons/5/5b/Rotten_Tomatoes.svg';
-
-  let plexTitles = [];
-  let plexReady = false;
-
-  // Auth overlay UI switching
-  function showSignup() {
-    document.getElementById('loginForm').style.display = 'none';
-    document.getElementById('signupForm').style.display = '';
-  }
-  function showLogin() {
-    document.getElementById('signupForm').style.display = 'none';
-    document.getElementById('loginForm').style.display = '';
-  }
-
-  // AUTH section logic
-  async function signup() {
-    document.getElementById('signupError').style.display = "none";
-    const email = document.getElementById('signupEmail').value;
-    const password = document.getElementById('signupPassword').value;
-    const { error } = await supabase.auth.signUp({ email, password });
-    if (error) {
-      document.getElementById('signupError').innerText = error.message;
-      document.getElementById('signupError').style.display = "block";
-    } else {
-      alert('Check your email for a confirmation link!');
-      showLogin();
+    function verifyAccess() {
+      const input = document.getElementById("adminPass").value;
+      if (input === adminPassword) {
+        document.getElementById("passwordPrompt").style.display = "none";
+        loadRequests();
+      } else {
+        document.getElementById("error").style.display = "block";
+      }
     }
-  }
 
-  async function login() {
-    document.getElementById('loginError').style.display = "none";
-    const email = document.getElementById('loginEmail').value;
-    const password = document.getElementById('loginPassword').value;
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) {
-      document.getElementById('loginError').innerText = error.message;
-      document.getElementById('loginError').style.display = "block";
-    } else {
-      document.getElementById('loginError').style.display = "none";
-      showUser(data.user);
-      hideAuthOverlay();
-    }
-  }
-
-  function showUser(user) {
-    if (!user) return;
-    document.getElementById('userWelcome').style.display = 'block';
-    document.getElementById('userEmail').innerText = `Welcome, ${user.email}`;
-  }
-
-  function hideUser() {
-    document.getElementById('userWelcome').style.display = 'none';
-    document.getElementById('userEmail').innerText = '';
-  }
-
-  async function logout() {
-    await supabase.auth.signOut();
-    hideUser();
-    showAuthOverlay();
-  }
-
-  async function getCurrentUser() {
-    const { data } = await supabase.auth.getUser();
-    return data?.user || null;
-  }
-
-  function showAuthOverlay() {
-    document.getElementById('authOverlay').style.display = 'flex';
-    document.body.classList.add('blurred');
-    hideUser();
-  }
-  function hideAuthOverlay() {
-    document.getElementById('authOverlay').style.display = 'none';
-    document.body.classList.remove('blurred');
-  }
-
-  // Highlight search matches
-  function highlightMatch(title) {
-    const searchTerm = document.getElementById("searchInput").value.trim();
-    if (!searchTerm) return title;
-    const regex = new RegExp(`(${searchTerm})`, "gi");
-    return title.replace(regex, `<span class="highlight">$1</span>`);
-  }
-
-  // Fetch plex_titles.json instead of Plex server directly
-  async function fetchPlexTitles() {
-    try {
-      const res = await fetch("plex_titles.json");
-      plexTitles = await res.json();
-      plexTitles = plexTitles.map(title => title.toLowerCase());
-      plexReady = true;
-    } catch (err) {
-      plexReady = true;
-      alert("Could not load Plex titles list. 'On Danflix' status may not be accurate.");
-    }
-  }
-  function isOnPlex(title) {
-    if (!plexReady) return false;
-    return plexTitles.includes(title.toLowerCase());
-  }
-
-  // Random movie suggestions
-  async function fetchRandomMovies() {
-    const container = document.getElementById("randomMovies");
-    if (!plexReady) {
-      container.innerHTML = "<p>Waiting for Plex titles...</p>";
-      return;
-    }
-    container.innerHTML = "<p>Loading random movies...</p>";
-    try {
-      const randomTerms = ['action', 'comedy', 'drama', 'thriller', 'romance'];
-      const term = randomTerms[Math.floor(Math.random() * randomTerms.length)];
-      const res = await fetch(`https://www.omdbapi.com/?s=${term}&apikey=${OMDB_API_KEY}`);
-      const data = await res.json();
-      container.innerHTML = "";
-      if (data.Response === "True" && data.Search) {
-        for (const movie of data.Search.slice(0, 6)) {
-          if (!movie.imdbID) continue;
-          const detail = await fetch(`https://www.omdbapi.com/?i=${movie.imdbID}&apikey=${OMDB_API_KEY}`);
-          const info = await detail.json();
-          const alreadyOnPlex = isOnPlex(info.Title);
-
-          const imdbRating = info.imdbRating ? info.imdbRating : "N/A";
-          let rtRating = "N/A";
-          if (info.Ratings) {
-            const rtObj = info.Ratings.find(r => r.Source === "Rotten Tomatoes");
-            rtRating = rtObj ? rtObj.Value : "N/A";
+    async function loadRequests() {
+      const list = document.getElementById("movieList");
+      list.innerHTML = "<p>Loading...</p>";
+      try {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/requests?select=*`, {
+          headers: {
+            "apikey": SUPABASE_KEY,
+            "Authorization": `Bearer ${SUPABASE_KEY}`
           }
+        });
+        const requests = await res.json();
+        list.innerHTML = '';
+        if (!requests.length) {
+          list.innerHTML = "<p>No movie requests yet.</p>";
+          return;
+        }
+        requests.forEach((movie) => {
+          const emailLabel = movie.user_email
+            ? `<span class="email-label">Requested by: ${movie.user_email}</span>`
+            : `<span class="email-label" style="color:gray;">Requested by: Unknown</span>`;
+          const nzbgeekUrl = `https://www.nzbgeek.info/geekseek.php?search=${encodeURIComponent(movie.title)}`;
           const div = document.createElement("div");
           div.className = "movie";
           div.innerHTML = `
-            <img src="${info.Poster !== "N/A" ? info.Poster : 'https://via.placeholder.com/100x150'}" />
+            <img src="${movie.poster !== "N/A" ? movie.poster : 'https://via.placeholder.com/100x150'}" alt="${movie.title}" />
             <div>
-              <h3>${highlightMatch(info.Title)} (${info.Year})</h3>
-              <div class="ratings">
-                <span class="score"><img src="${IMDB_ICON}" alt="IMDb" title="IMDb" />${imdbRating}</span>
-                <span class="score"><img src="${RT_ICON}" alt="Rotten Tomatoes" title="Rotten Tomatoes" />${rtRating}</span>
-              </div>
-              <p>${info.Type}</p>
-              <button ${alreadyOnPlex ? "disabled" : `onclick='requestMovie(${JSON.stringify(info)})'`}>
-                ${alreadyOnPlex ? "On DanFlix" : "Request"}
-              </button>
-            </div>`;
-          container.appendChild(div);
-        }
-      } else {
-        container.innerHTML = "<p>No random movies found.</p>";
+              ${emailLabel}
+              <h3>${movie.title} (${movie.year})</h3>
+              <p>${movie.description}</p>
+              <button onclick="deleteRequest(${movie.id}, '${movie.title.replace(/'/g, "\\'")}')">Delete</button>
+              <button onclick="window.open('${nzbgeekUrl}', '_blank')">NZBGEEK</button>
+            </div>
+          `;
+          list.appendChild(div);
+        });
+      } catch (err) {
+        list.innerHTML = "<p>Error loading requests.</p>";
       }
-    } catch (err) {
-      container.innerHTML = "<p>Error loading movies.</p>";
-    }
-  }
-
-  // Search movies
-  async function searchMovies() {
-    const query = document.getElementById("searchInput").value.trim();
-    const resultsContainer = document.getElementById("results");
-    const randomMovies = document.getElementById("randomMovies");
-
-    if (!plexReady) {
-      resultsContainer.innerHTML = "<p>Waiting for Plex titles...</p>";
-      return;
     }
 
-    if (!query) {
-      randomMovies.style.display = 'block';
-      resultsContainer.innerHTML = '';
-      fetchRandomMovies();
-      return;
-    }
-    randomMovies.style.display = 'none';
-    resultsContainer.innerHTML = "<p>Searching...</p>";
-    try {
-      const res = await fetch(`https://www.omdbapi.com/?s=${encodeURIComponent(query)}&apikey=${OMDB_API_KEY}`);
-      const data = await res.json();
-      resultsContainer.innerHTML = "";
-
-      if (data.Response === "True" && data.Search) {
-        const normalizedQuery = query.trim().toLowerCase();
-        const exactMatches = [];
-        const wordMatches = [];
-        const others = [];
-
-        for (const movie of data.Search) {
-          if (!movie.imdbID || !movie.Title) continue;
-          const normalizedTitle = movie.Title.trim().toLowerCase();
-          if (normalizedTitle === normalizedQuery) {
-            exactMatches.push(movie);
-          } else if (new RegExp(`\\b${normalizedQuery}\\b`, "i").test(movie.Title)) {
-            wordMatches.push(movie);
-          } else {
-            others.push(movie);
+    async function deleteRequest(id, title) {
+      if (confirm(`Are you sure you want to delete "${title}"?`)) {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/requests?id=eq.${id}`, {
+          method: "DELETE",
+          headers: {
+            "apikey": SUPABASE_KEY,
+            "Authorization": `Bearer ${SUPABASE_KEY}`
           }
+        });
+        if (res.ok) {
+          loadRequests();
+        } else {
+          alert("Error deleting request.");
         }
-
-        let displayMovies = [...exactMatches, ...wordMatches];
-        if (displayMovies.length === 0) {
-          resultsContainer.innerHTML = "<p>No exact matches found. Showing suggestions:</p>";
-          displayMovies = others;
-        }
-
-        for (const movie of displayMovies) {
-          const detail = await fetch(`https://www.omdbapi.com/?i=${movie.imdbID}&apikey=${OMDB_API_KEY}`);
-          const info = await detail.json();
-          const alreadyOnPlex = isOnPlex(info.Title);
-
-          const imdbRating = info.imdbRating ? info.imdbRating : "N/A";
-          let rtRating = "N/A";
-          if (info.Ratings) {
-            const rtObj = info.Ratings.find(r => r.Source === "Rotten Tomatoes");
-            rtRating = rtObj ? rtObj.Value : "N/A";
-          }
-
-          const div = document.createElement("div");
-          div.className = "movie";
-          div.innerHTML = `
-            <img src="${info.Poster !== "N/A" ? info.Poster : 'https://via.placeholder.com/100x150'}" />
-            <div>
-              <h3>${highlightMatch(info.Title)} (${info.Year})</h3>
-              <div class="ratings">
-                <span class="score"><img src="${IMDB_ICON}" alt="IMDb" title="IMDb" />${imdbRating}</span>
-                <span class="score"><img src="${RT_ICON}" alt="Rotten Tomatoes" title="Rotten Tomatoes" />${rtRating}</span>
-              </div>
-              <p>${info.Plot || "No description available."}</p>
-              <button ${alreadyOnPlex ? "disabled" : `onclick='requestMovie(${JSON.stringify(info)})'`}>
-                ${alreadyOnPlex ? "On DanFlix" : "Request"}
-              </button>
-            </div>`;
-          resultsContainer.appendChild(div);
-        }
-      } else {
-        resultsContainer.innerHTML = "<p>No results found.</p>";
       }
-    } catch (err) {
-      resultsContainer.innerHTML = "<p>Search error.</p>";
     }
-  }
 
-  async function requestMovie(movie) {
-    const user = await getCurrentUser();
-    if (!user) {
-      alert("Please log in to request a movie.");
-      showAuthOverlay();
-      return;
-    }
-    if (!plexReady) {
-      alert("Please wait for Plex titles to load before requesting.");
-      return;
-    }
-    if (isOnPlex(movie.Title)) {
-      alert(`"${movie.Title}" is already on Danflix!`);
-      return;
-    }
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/requests`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "apikey": SUPABASE_KEY,
-        "Authorization": `Bearer ${SUPABASE_KEY}`,
-        "Prefer": "return=representation"
-      },
-      body: JSON.stringify([{
-        title: movie.Title,
-        year: movie.Year,
-        imdbID: movie.imdbID || "",
-        description: movie.Plot || "No description provided",
-        poster: movie.Poster,
-        user_id: user.id,
-        user_email: user.email
-      }])
+    // Optional: Allow pressing Enter to submit password
+    document.getElementById("adminPass").addEventListener("keyup", function(event) {
+      if (event.key === "Enter") {
+        verifyAccess();
+      }
     });
-    const text = await res.text();
-    if (res.ok) {
-      alert(`Danflix Thanks you, Allow 24-48 hours for "${movie.Title}"`);
-    } else {
-      alert("Error submitting request: " + text);
-    }
-  }
-
-  // On page load, check auth and fetch Plex titles before showing movies
-  window.onload = async function() {
-    const { data } = await supabase.auth.getUser();
-    if (data?.user) {
-      showUser(data.user);
-      hideAuthOverlay();
-    } else {
-      showAuthOverlay();
-    }
-    await fetchPlexTitles(); // Wait for Plex titles to load from JSON
-    fetchRandomMovies();
-  };
-</script>
+  </script>
 </body>
 </html>
