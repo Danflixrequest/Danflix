@@ -175,6 +175,28 @@
       color: #666666;
       cursor: not-allowed;
     }
+    /* Danflix Button Theme for "On DanFlix" Button */
+    .danflix-button {
+      background-color: black;
+      color: #e50914;
+      font-family: Arial, sans-serif;
+      font-weight: bold;
+      font-size: 2rem;
+      border: 2px solid #e50914;
+      border-radius: 8px;
+      padding: 20px 40px;
+      cursor: pointer;
+      text-transform: uppercase;
+      transition: all 0.3s ease;
+      text-align: center;
+      display: inline-block;
+      text-decoration: none;
+    }
+    .danflix-button:hover {
+      background-color: #e50914;
+      color: white;
+      transform: scale(1.05);
+    }
     .section-title {
       font-size: 1.5rem;
       margin-top: 2rem;
@@ -198,6 +220,10 @@
       }
       #logo {
         width: 95vw;
+      }
+      .danflix-button {
+        font-size: 1.1rem;
+        padding: 12px 22px;
       }
     }
     .ratings {
@@ -398,45 +424,41 @@
   }
 
   // Dynamic HD poster background
-const TMDB_IMAGE_BG = "https://image.tmdb.org/t/p/w1280";
-let bgPosters = [];
-let bgIndex = 0;
-let bgInterval = null;
+  const TMDB_IMAGE_BG = "https://image.tmdb.org/t/p/w1280";
+  let bgPosters = [];
+  let bgIndex = 0;
+  let bgInterval = null;
 
-async function fetchLatestPosters() {
-  try {
-    const res = await fetch(
-      `https://api.themoviedb.org/3/movie/now_playing?api_key=${TMDB_API_KEY}&language=en-US&page=1`
-    );
-    const data = await res.json();
-    console.log("TMDb API response:", data);
-    bgPosters = (data.results || [])
-      .filter(m => m.poster_path)
-      .map(m => TMDB_IMAGE_BG + m.poster_path);
-    console.log("Background posters:", bgPosters);
-    bgPosters = bgPosters.sort(() => Math.random() - 0.5);
-    if(bgPosters.length) {
-      cycleBgPosters();
-    } else {
-      document.body.style.backgroundImage = "";
-      console.log("No posters found for background.");
+  async function fetchLatestPosters() {
+    try {
+      const res = await fetch(
+        `https://api.themoviedb.org/3/movie/now_playing?api_key=${TMDB_API_KEY}&language=en-US&page=1`
+      );
+      const data = await res.json();
+      bgPosters = (data.results || [])
+        .filter(m => m.poster_path)
+        .map(m => TMDB_IMAGE_BG + m.poster_path);
+      bgPosters = bgPosters.sort(() => Math.random() - 0.5);
+      if(bgPosters.length) {
+        cycleBgPosters();
+      } else {
+        document.body.style.backgroundImage = "";
+      }
+    } catch (err) {
+      console.error("Couldn't fetch backgrounds:", err);
     }
-  } catch (err) {
-    console.error("Couldn't fetch backgrounds:", err);
   }
-}
 
-function cycleBgPosters() {
-  if (bgPosters.length === 0) {
-    document.body.style.backgroundImage = "";
-    return;
+  function cycleBgPosters() {
+    if (bgPosters.length === 0) {
+      document.body.style.backgroundImage = "";
+      return;
+    }
+    document.body.style.backgroundImage = `url('${bgPosters[bgIndex]}')`;
+    bgIndex = (bgIndex + 1) % bgPosters.length;
+    if(bgInterval) clearTimeout(bgInterval);
+    bgInterval = setTimeout(cycleBgPosters, 7000);
   }
-  console.log("Setting background image:", bgPosters[bgIndex]);
-  document.body.style.backgroundImage = `url('${bgPosters[bgIndex]}')`;
-  bgIndex = (bgIndex + 1) % bgPosters.length;
-  if(bgInterval) clearTimeout(bgInterval);
-  bgInterval = setTimeout(cycleBgPosters, 7000);
-}
 
   // Random movie suggestions from TMDb
   async function fetchRandomMovies() {
@@ -470,7 +492,7 @@ function cycleBgPosters() {
                 <span class="score"><img src="${RT_ICON}" alt="Rotten Tomatoes" title="Rotten Tomatoes" />${rtRating}</span>
               </div>
               <p>Movie</p>
-              <button ${alreadyOnPlex ? "disabled" : `onclick='requestMovie(${JSON.stringify({
+              <button ${alreadyOnPlex ? "class='danflix-button' disabled" : `onclick='requestMovie(${JSON.stringify({
                 Title: movie.title,
                 Year: getYear(movie.release_date),
                 imdbID: "",
@@ -551,7 +573,7 @@ function cycleBgPosters() {
               <span class="score"><img src="${RT_ICON}" alt="Rotten Tomatoes" title="Rotten Tomatoes" />${rtRating}</span>
             </div>
             <p>${movie.overview || "No description available."}</p>
-            <button ${alreadyOnPlex ? "disabled" : `onclick='requestMovie(${JSON.stringify({
+            <button ${alreadyOnPlex ? "class='danflix-button' disabled" : `onclick='requestMovie(${JSON.stringify({
               Title: movie.title,
               Year: getYear(movie.release_date),
               imdbID: "",
