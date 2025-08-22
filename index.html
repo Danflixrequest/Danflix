@@ -95,7 +95,7 @@
       box-shadow: 0 4px 12px rgba(0,0,0,0.05);
       padding: 1rem;
       width: 100%;
-      max-width: 250px;
+      max-width: 300px;
       text-align: center;
       position: relative;
       z-index: 1;
@@ -138,9 +138,14 @@
       position: relative;
       z-index: 1;
     }
-    img:not(.auth-logo) {
+    .movie img {
       width: 100px;
-      height: auto;
+      height: 150px;
+      object-fit: cover;
+      border-radius: 4px;
+      background: #eee;
+    }
+    img:not(.auth-logo) {
       border-radius: 4px;
     }
     button, .danflix-button {
@@ -204,6 +209,10 @@
       }
       #logo {
         width: 95vw;
+      }
+      .movie img {
+        width: 75px;
+        height: 110px;
       }
       button, .danflix-button {
         font-size: 0.95rem;
@@ -292,7 +301,6 @@
 
   // Ratings Icons
   const IMDB_ICON = 'https://upload.wikimedia.org/wikipedia/commons/6/69/IMDB_Logo_2016.svg';
-  const RT_ICON = 'https://upload.wikimedia.org/wikipedia/commons/5/5b/Rotten_Tomatoes.svg';
 
   let plexTitles = [];
   let plexReady = false;
@@ -407,56 +415,48 @@
   }
 
   // Random movie suggestions from TMDb
-  async function fetchRandomMovies() {
-    const container = document.getElementById("randomMovies");
-    if (!plexReady) {
-      container.innerHTML = "<p>Waiting for Plex titles...</p>";
-      return;
-    }
-    container.innerHTML = "<p>Loading random movies...</p>";
+async function fetchRandomMovies() {
+  const container = document.getElementById("randomMovies");
+  if (!plexReady || !plexTitles.length) {
+    container.innerHTML = "<p>Waiting for Plex titles...</p>";
+    return;
+  }
+  container.innerHTML = "<p>Loading Danflix movie suggestions...</p>";
+
+  // Shuffle and pick 6 random titles
+  const shuffled = plexTitles.sort(() => Math.random() - 0.5).slice(0, 6);
+
+  for (const title of shuffled) {
     try {
-      const randomTerms = ['action', 'comedy', 'drama', 'thriller', 'romance'];
-      const term = randomTerms[Math.floor(Math.random() * randomTerms.length)];
-      const res = await fetch(`https://api.themoviedb.org/3/search/movie?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(term)}`);
-      const data = await res.json();
-      container.innerHTML = "";
-      if (data.results && data.results.length) {
-        for (const movie of data.results.slice(0, 6)) {
-          const alreadyOnPlex = isOnPlex(movie.title);
+      // Fetch from TMDb
+      const tmdbRes = await fetch(
+        `https://api.themoviedb.org/3/search/movie?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(title)}`
+      );
+      const tmdbData = await tmdbRes.json();
+      const movie = tmdbData.results && tmdbData.results[0];
+      if (!movie) continue;
 
-          const imdbRating = movie.vote_average ? movie.vote_average.toFixed(1) : "N/A";
-          const rtRating = "N/A";
+      const imdbRating = movie.vote_average ? movie.vote_average.toFixed(1) : "N/A";
 
-          const div = document.createElement("div");
-          div.className = "movie";
-          div.innerHTML = `
-            <img src="${getPosterUrl(movie.poster_path)}" />
-            <div>
-              <h3>${highlightMatch(movie.title)} (${getYear(movie.release_date)})</h3>
-              <div class="ratings">
-                <span class="score"><img src="${IMDB_ICON}" alt="IMDb" title="TMDb Average" />${imdbRating}</span>
-                <span class="score"><img src="${RT_ICON}" alt="Rotten Tomatoes" title="Rotten Tomatoes" />${rtRating}</span>
-              </div>
-              <p>Movie</p>
-              <button ${alreadyOnPlex ? "class='danflix-button' disabled" : `onclick='requestMovie(${JSON.stringify({
-                Title: movie.title,
-                Year: getYear(movie.release_date),
-                imdbID: "",
-                Plot: movie.overview,
-                Poster: getPosterUrl(movie.poster_path)
-              })})'`}>
-                ${alreadyOnPlex ? "On DanFlix" : "Request"}
-              </button>
-            </div>`;
-          container.appendChild(div);
-        }
-      } else {
-        container.innerHTML = "<p>No random movies found.</p>";
-      }
+      const div = document.createElement("div");
+      div.className = "movie";
+      div.innerHTML = `
+        <img src="${getPosterUrl(movie.poster_path)}" />
+        <div>
+          <h3>${highlightMatch(movie.title)} (${getYear(movie.release_date)})</h3>
+          <div class="ratings">
+            <span class="score"><img src="${IMDB_ICON}" alt="IMDb" title="TMDb Average" />${imdbRating}</span>
+          </div>
+          <p>${movie.overview || "No description available."}</p>
+          <button class='danflix-button' disabled>On DanFlix</button>
+        </div>`;
+      container.appendChild(div);
     } catch (err) {
-      container.innerHTML = "<p>Error loading movies.</p>";
+      // Ignore failed fetches and continue
+      continue;
     }
   }
+}
 
   // Search movies via TMDb
   async function searchMovies() {
@@ -487,7 +487,7 @@
 
       function getMatchType(title, term) {
         const normTitle = title.trim().toLowerCase();
-        if (normTitle === term) return 2; // Exact match
+        if (normTitle === term) return 2;
         if (normTitle.includes(term)) return 1;
         return 0;
       }
@@ -504,10 +504,7 @@
 
       for (const movie of displayMovies) {
         const alreadyOnPlex = isOnPlex(movie.title);
-
         const imdbRating = movie.vote_average ? movie.vote_average.toFixed(1) : "N/A";
-        const rtRating = "N/A";
-
         const div = document.createElement("div");
         div.className = "movie";
         div.innerHTML = `
@@ -515,8 +512,9 @@
           <div>
             <h3>${highlightMatch(movie.title)} (${getYear(movie.release_date)})</h3>
             <div class="ratings">
-              <span class="score"><img src="${IMDB_ICON}" alt="IMDb" title="TMDb Average" />${imdbRating}</span>
-              <span class="score"><img src="${RT_ICON}" alt="Rotten Tomatoes" title="Rotten Tomatoes" />${rtRating}</span>
+              <span class="score">
+                <img src="${IMDB_ICON}" alt="IMDb" title="TMDb Average" />${imdbRating}
+              </span>
             </div>
             <p>${movie.overview || "No description available."}</p>
             <button ${alreadyOnPlex ? "class='danflix-button' disabled" : `onclick='requestMovie(${JSON.stringify({
