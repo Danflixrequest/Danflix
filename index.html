@@ -479,10 +479,10 @@
 async function fetchRandomMovies() {
   const container = document.getElementById("randomMovies");
   if (!plexReady || !plexTitles.length) {
-    container.innerHTML = "<p>Waiting for Plex titles...</p>";
+    container.innerHTML = "<p></p>";
     return;
   }
-  container.innerHTML = "<p>Loading Danflix movie suggestions...</p>";
+  container.innerHTML = "<p></p>";
 
   // Shuffle and pick 6 random titles
   const shuffled = plexTitles.sort(() => Math.random() - 0.5).slice(0, 6);
@@ -526,7 +526,7 @@ async function fetchRandomMovies() {
     const randomMovies = document.getElementById("randomMovies");
 
     if (!plexReady) {
-      resultsContainer.innerHTML = "<p>Waiting for Plex titles...</p>";
+      resultsContainer.innerHTML = "<p></p>";
       return;
     }
 
@@ -650,3 +650,4 @@ async function fetchRandomMovies() {
 </script>
 </body>
 </html>
+
