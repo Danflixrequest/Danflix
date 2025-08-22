@@ -8,13 +8,28 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     body {
+      background: none !important;
+      transition: background-image 1s ease-in-out;
+      background-size: cover;
+      background-position: center center;
+      background-repeat: no-repeat;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background-color: #f4f4f4;
       margin: 0;
       padding: 2rem;
       display: flex;
       flex-direction: column;
       align-items: center;
+    }
+    #bgOverlay {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      background: rgba(0,0,0,0.45);
+    }
+    #pageContent, #authOverlay, #userWelcome {
+      position: relative;
+      z-index: 1;
     }
     body.blurred #pageContent {
       filter: blur(8px);
@@ -97,6 +112,8 @@
       width: 100%;
       max-width: 250px;
       text-align: center;
+      position: relative;
+      z-index: 1;
     }
     #logo {
       width: 350px;
@@ -105,6 +122,8 @@
       display: block;
       margin-left: auto;
       margin-right: auto;
+      position: relative;
+      z-index: 1;
     }
     input#searchInput {
       display: block;
@@ -118,6 +137,8 @@
       border-radius: 8px;
       box-sizing: border-box;
       margin-bottom: 1vw;
+      position: relative;
+      z-index: 1;
     }
     .movie {
       background: white;
@@ -129,6 +150,8 @@
       max-width: 350px;
       margin-top: 1rem;
       box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      position: relative;
+      z-index: 1;
     }
     img:not(.auth-logo) {
       width: 100px;
@@ -157,6 +180,8 @@
       margin-top: 2rem;
       text-align: center;
       font-weight: bold;
+      position: relative;
+      z-index: 1;
     }
     .highlight {
       background-color: yellow;
@@ -164,6 +189,8 @@
     .admin-link {
       margin-top: 2rem;
       font-size: 0.9rem;
+      position: relative;
+      z-index: 1;
     }
     @media (max-width: 600px) {
       .auth-box img {
@@ -201,13 +228,13 @@
   </style>
 </head>
 <body class="blurred">
+  <div id="bgOverlay"></div>
 
   <!-- AUTH OVERLAY -->
   <div id="authOverlay">
     <div class="auth-box">
       <img src="Danflix.png" alt="Danflix Logo" class="auth-logo"/>
       <div id="authForms">
-        <!-- Login Form (default) -->
         <div id="loginForm">
           <h2>Login</h2>
           <input type="email" id="loginEmail" placeholder="Email" autocomplete="username" />
@@ -216,7 +243,6 @@
           <p id="loginError"></p>
           <div class="auth-switch" onclick="showSignup()">No account? Sign Up</div>
         </div>
-        <!-- Signup Form (hidden by default) -->
         <div id="signupForm" style="display:none;">
           <h2>Sign Up</h2>
           <input type="email" id="signupEmail" placeholder="Email" autocomplete="username" />
@@ -252,8 +278,8 @@
   const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ0aHd1Y2RoaXVld3FmbGpiYWZ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU2MDY3NjYsImV4cCI6MjA3MTE4Mjc2Nn0.JaLXafZhYMYQwjuZErwrGph080jWYqOXhkpjRRP9gg0';
   const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-  // OMDb API
-  const OMDB_API_KEY = 'd60f302b';
+  // TMDb API
+  const TMDB_API_KEY = '9b9dd1ae2eafae23ed2c2c675d2b4407'; // <-- Use your TMDb API key!
 
   // Ratings Icons
   const IMDB_ICON = 'https://upload.wikimedia.org/wikipedia/commons/6/69/IMDB_Logo_2016.svg';
@@ -354,19 +380,65 @@
     }
   }
 
-  // Improved normalization for TV and movie title matching
   function normalizeTitle(title) {
-    // Remove year, brackets, and extra spaces, and lower-case
     return title.replace(/\s*[\(\[\{].*?[\)\]\}]\s*/g, '').trim().toLowerCase();
   }
-
   function isOnPlex(title) {
     if (!plexReady) return false;
     const normTitle = normalizeTitle(title);
     return plexTitles.some(plexTitle => normalizeTitle(plexTitle) === normTitle);
   }
 
-  // Random movie suggestions
+  // TMDb helpers
+  function getPosterUrl(path) {
+    return path ? `https://image.tmdb.org/t/p/w300${path}` : 'https://via.placeholder.com/100x150';
+  }
+  function getYear(date) {
+    return date ? date.split('-')[0] : '';
+  }
+
+  // Dynamic HD poster background
+const TMDB_IMAGE_BG = "https://image.tmdb.org/t/p/w1280";
+let bgPosters = [];
+let bgIndex = 0;
+let bgInterval = null;
+
+async function fetchLatestPosters() {
+  try {
+    const res = await fetch(
+      `https://api.themoviedb.org/3/movie/now_playing?api_key=${TMDB_API_KEY}&language=en-US&page=1`
+    );
+    const data = await res.json();
+    console.log("TMDb API response:", data);
+    bgPosters = (data.results || [])
+      .filter(m => m.poster_path)
+      .map(m => TMDB_IMAGE_BG + m.poster_path);
+    console.log("Background posters:", bgPosters);
+    bgPosters = bgPosters.sort(() => Math.random() - 0.5);
+    if(bgPosters.length) {
+      cycleBgPosters();
+    } else {
+      document.body.style.backgroundImage = "";
+      console.log("No posters found for background.");
+    }
+  } catch (err) {
+    console.error("Couldn't fetch backgrounds:", err);
+  }
+}
+
+function cycleBgPosters() {
+  if (bgPosters.length === 0) {
+    document.body.style.backgroundImage = "";
+    return;
+  }
+  console.log("Setting background image:", bgPosters[bgIndex]);
+  document.body.style.backgroundImage = `url('${bgPosters[bgIndex]}')`;
+  bgIndex = (bgIndex + 1) % bgPosters.length;
+  if(bgInterval) clearTimeout(bgInterval);
+  bgInterval = setTimeout(cycleBgPosters, 7000);
+}
+
+  // Random movie suggestions from TMDb
   async function fetchRandomMovies() {
     const container = document.getElementById("randomMovies");
     if (!plexReady) {
@@ -377,34 +449,34 @@
     try {
       const randomTerms = ['action', 'comedy', 'drama', 'thriller', 'romance'];
       const term = randomTerms[Math.floor(Math.random() * randomTerms.length)];
-      const res = await fetch(`https://www.omdbapi.com/?s=${term}&apikey=${OMDB_API_KEY}`);
+      const res = await fetch(`https://api.themoviedb.org/3/search/movie?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(term)}`);
       const data = await res.json();
       container.innerHTML = "";
-      if (data.Response === "True" && data.Search) {
-        for (const movie of data.Search.slice(0, 6)) {
-          if (!movie.imdbID) continue;
-          const detail = await fetch(`https://www.omdbapi.com/?i=${movie.imdbID}&apikey=${OMDB_API_KEY}`);
-          const info = await detail.json();
-          const alreadyOnPlex = isOnPlex(info.Title);
+      if (data.results && data.results.length) {
+        for (const movie of data.results.slice(0, 6)) {
+          const alreadyOnPlex = isOnPlex(movie.title);
 
-          const imdbRating = info.imdbRating ? info.imdbRating : "N/A";
-          let rtRating = "N/A";
-          if (info.Ratings) {
-            const rtObj = info.Ratings.find(r => r.Source === "Rotten Tomatoes");
-            rtRating = rtObj ? rtObj.Value : "N/A";
-          }
+          const imdbRating = movie.vote_average ? movie.vote_average.toFixed(1) : "N/A";
+          const rtRating = "N/A";
+
           const div = document.createElement("div");
           div.className = "movie";
           div.innerHTML = `
-            <img src="${info.Poster !== "N/A" ? info.Poster : 'https://via.placeholder.com/100x150'}" />
+            <img src="${getPosterUrl(movie.poster_path)}" />
             <div>
-              <h3>${highlightMatch(info.Title)} (${info.Year})</h3>
+              <h3>${highlightMatch(movie.title)} (${getYear(movie.release_date)})</h3>
               <div class="ratings">
-                <span class="score"><img src="${IMDB_ICON}" alt="IMDb" title="IMDb" />${imdbRating}</span>
+                <span class="score"><img src="${IMDB_ICON}" alt="IMDb" title="TMDb Average" />${imdbRating}</span>
                 <span class="score"><img src="${RT_ICON}" alt="Rotten Tomatoes" title="Rotten Tomatoes" />${rtRating}</span>
               </div>
-              <p>${info.Type}</p>
-              <button ${alreadyOnPlex ? "disabled" : `onclick='requestMovie(${JSON.stringify(info)})'`}>
+              <p>Movie</p>
+              <button ${alreadyOnPlex ? "disabled" : `onclick='requestMovie(${JSON.stringify({
+                Title: movie.title,
+                Year: getYear(movie.release_date),
+                imdbID: "",
+                Plot: movie.overview,
+                Poster: getPosterUrl(movie.poster_path)
+              })})'`}>
                 ${alreadyOnPlex ? "On DanFlix" : "Request"}
               </button>
             </div>`;
@@ -418,84 +490,83 @@
     }
   }
 
-  // Search movies
-async function searchMovies() {
-  const query = document.getElementById("searchInput").value.trim();
-  const resultsContainer = document.getElementById("results");
-  const randomMovies = document.getElementById("randomMovies");
+  // Search movies via TMDb
+  async function searchMovies() {
+    const query = document.getElementById("searchInput").value.trim();
+    const resultsContainer = document.getElementById("results");
+    const randomMovies = document.getElementById("randomMovies");
 
-  if (!plexReady) {
-    resultsContainer.innerHTML = "<p>Waiting for Plex titles...</p>";
-    return;
-  }
-
-  if (!query) {
-    randomMovies.style.display = 'block';
-    resultsContainer.innerHTML = '';
-    fetchRandomMovies();
-    return;
-  }
-  randomMovies.style.display = 'none';
-  resultsContainer.innerHTML = "<p>Searching...</p>";
-  try {
-    const res = await fetch(`https://www.omdbapi.com/?s=${encodeURIComponent(query)}&apikey=${OMDB_API_KEY}`);
-    const data = await res.json();
-    resultsContainer.innerHTML = "";
-
-    const searchTerm = query.trim().toLowerCase();
-    let displayMovies = (data.Search || []).filter(movie => movie.imdbID && movie.Title);
-
-    // Use match type for sorting: exact > partial (highlight) > others
-    function getMatchType(title, term) {
-      const normTitle = title.trim().toLowerCase();
-      if (normTitle === term) return 2; // Exact match
-      if (normTitle.includes(term)) return 1; // Partial/yellow highlight match
-      return 0; // No match
-    }
-    displayMovies.sort((a, b) => {
-      const aType = getMatchType(a.Title, searchTerm);
-      const bType = getMatchType(b.Title, searchTerm);
-      return bType - aType;
-    });
-
-    if (displayMovies.length === 0) {
-      resultsContainer.innerHTML = "<p>No results found.</p>";
+    if (!plexReady) {
+      resultsContainer.innerHTML = "<p>Waiting for Plex titles...</p>";
       return;
     }
 
-    for (const movie of displayMovies) {
-      const detail = await fetch(`https://www.omdbapi.com/?i=${movie.imdbID}&apikey=${OMDB_API_KEY}`);
-      const info = await detail.json();
-      const alreadyOnPlex = isOnPlex(info.Title);
+    if (!query) {
+      randomMovies.style.display = 'block';
+      resultsContainer.innerHTML = '';
+      fetchRandomMovies();
+      return;
+    }
+    randomMovies.style.display = 'none';
+    resultsContainer.innerHTML = "<p>Searching...</p>";
+    try {
+      const res = await fetch(`https://api.themoviedb.org/3/search/movie?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(query)}`);
+      const data = await res.json();
+      resultsContainer.innerHTML = "";
 
-      const imdbRating = info.imdbRating ? info.imdbRating : "N/A";
-      let rtRating = "N/A";
-      if (info.Ratings) {
-        const rtObj = info.Ratings.find(r => r.Source === "Rotten Tomatoes");
-        rtRating = rtObj ? rtObj.Value : "N/A";
+      const searchTerm = query.trim().toLowerCase();
+      let displayMovies = (data.results || []).filter(movie => movie.title);
+
+      function getMatchType(title, term) {
+        const normTitle = title.trim().toLowerCase();
+        if (normTitle === term) return 2; // Exact match
+        if (normTitle.includes(term)) return 1;
+        return 0;
+      }
+      displayMovies.sort((a, b) => {
+        const aType = getMatchType(a.title, searchTerm);
+        const bType = getMatchType(b.title, searchTerm);
+        return bType - aType;
+      });
+
+      if (displayMovies.length === 0) {
+        resultsContainer.innerHTML = "<p>No results found.</p>";
+        return;
       }
 
-      const div = document.createElement("div");
-      div.className = "movie";
-      div.innerHTML = `
-        <img src="${info.Poster !== "N/A" ? info.Poster : 'https://via.placeholder.com/100x150'}" />
-        <div>
-          <h3>${highlightMatch(info.Title)} (${info.Year})</h3>
-          <div class="ratings">
-            <span class="score"><img src="${IMDB_ICON}" alt="IMDb" title="IMDb" />${imdbRating}</span>
-            <span class="score"><img src="${RT_ICON}" alt="Rotten Tomatoes" title="Rotten Tomatoes" />${rtRating}</span>
-          </div>
-          <p>${info.Plot || "No description available."}</p>
-          <button ${alreadyOnPlex ? "disabled" : `onclick='requestMovie(${JSON.stringify(info)})'`}>
-            ${alreadyOnPlex ? "On DanFlix" : "Request"}
-          </button>
-        </div>`;
-      resultsContainer.appendChild(div);
+      for (const movie of displayMovies) {
+        const alreadyOnPlex = isOnPlex(movie.title);
+
+        const imdbRating = movie.vote_average ? movie.vote_average.toFixed(1) : "N/A";
+        const rtRating = "N/A";
+
+        const div = document.createElement("div");
+        div.className = "movie";
+        div.innerHTML = `
+          <img src="${getPosterUrl(movie.poster_path)}" />
+          <div>
+            <h3>${highlightMatch(movie.title)} (${getYear(movie.release_date)})</h3>
+            <div class="ratings">
+              <span class="score"><img src="${IMDB_ICON}" alt="IMDb" title="TMDb Average" />${imdbRating}</span>
+              <span class="score"><img src="${RT_ICON}" alt="Rotten Tomatoes" title="Rotten Tomatoes" />${rtRating}</span>
+            </div>
+            <p>${movie.overview || "No description available."}</p>
+            <button ${alreadyOnPlex ? "disabled" : `onclick='requestMovie(${JSON.stringify({
+              Title: movie.title,
+              Year: getYear(movie.release_date),
+              imdbID: "",
+              Plot: movie.overview,
+              Poster: getPosterUrl(movie.poster_path)
+            })})'`}>
+              ${alreadyOnPlex ? "On DanFlix" : "Request"}
+            </button>
+          </div>`;
+        resultsContainer.appendChild(div);
+      }
+    } catch (err) {
+      resultsContainer.innerHTML = "<p>Search error.</p>";
     }
-  } catch (err) {
-    resultsContainer.innerHTML = "<p>Search error.</p>";
   }
-}
 
   async function requestMovie(movie) {
     const user = await getCurrentUser();
@@ -538,7 +609,6 @@ async function searchMovies() {
     }
   }
 
-  // On page load, check auth and fetch Plex titles before showing movies
   window.onload = async function() {
     const { data } = await supabase.auth.getUser();
     if (data?.user) {
@@ -547,8 +617,9 @@ async function searchMovies() {
     } else {
       showAuthOverlay();
     }
-    await fetchPlexTitles(); // Wait for Plex titles to load from JSON
+    await fetchPlexTitles();
     fetchRandomMovies();
+    fetchLatestPosters();
   };
 </script>
 </body>
