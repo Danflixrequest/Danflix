@@ -8,28 +8,13 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     body {
-      background: none !important;
-      transition: background-image 1s ease-in-out;
-      background-size: cover;
-      background-position: center center;
-      background-repeat: no-repeat;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f4f4f4;
       margin: 0;
       padding: 2rem;
       display: flex;
       flex-direction: column;
       align-items: center;
-    }
-    #bgOverlay {
-      position: fixed;
-      inset: 0;
-      z-index: 0;
-      pointer-events: none;
-      background: rgba(0,0,0,0.45);
-    }
-    #pageContent, #authOverlay, #userWelcome {
-      position: relative;
-      z-index: 1;
     }
     body.blurred #pageContent {
       filter: blur(8px);
@@ -158,7 +143,7 @@
       height: auto;
       border-radius: 4px;
     }
-    button {
+    button, .danflix-button {
       padding: 10px 20px;
       margin-top: 10px;
       background-color: #e50914;
@@ -166,36 +151,35 @@
       border: none;
       border-radius: 6px;
       cursor: pointer;
-    }
-    button:hover {
-      background-color: #bf0810;
-    }
-    button:disabled {
-      background-color: #cccccc;
-      color: #666666;
-      cursor: not-allowed;
-    }
-    /* Danflix Button Theme for "On DanFlix" Button */
-    .danflix-button {
-      background-color: black;
-      color: #e50914;
-      font-family: Arial, sans-serif;
+      font-size: 1rem;
       font-weight: bold;
-      font-size: 2rem;
-      border: 2px solid #e50914;
-      border-radius: 8px;
-      padding: 20px 40px;
-      cursor: pointer;
-      text-transform: uppercase;
       transition: all 0.3s ease;
+      text-transform: none;
       text-align: center;
       display: inline-block;
       text-decoration: none;
     }
-    .danflix-button:hover {
-      background-color: #e50914;
+    button:hover, .danflix-button:hover {
+      background-color: #bf0810;
       color: white;
       transform: scale(1.05);
+    }
+    button:disabled, .danflix-button:disabled {
+      background-color: #cccccc;
+      color: #666666;
+      cursor: not-allowed;
+      border: none;
+      transform: none;
+    }
+    .danflix-button {
+      background-color: black;
+      color: #e50914;
+      border: 2px solid #e50914;
+      font-size: 1rem;
+      text-transform: none;
+      margin-top: 10px;
+      box-sizing: border-box;
+      padding: 10px 20px;
     }
     .section-title {
       font-size: 1.5rem;
@@ -221,9 +205,9 @@
       #logo {
         width: 95vw;
       }
-      .danflix-button {
-        font-size: 1.1rem;
-        padding: 12px 22px;
+      button, .danflix-button {
+        font-size: 0.95rem;
+        padding: 10px 12px;
       }
     }
     .ratings {
@@ -254,8 +238,7 @@
   </style>
 </head>
 <body class="blurred">
-  <div id="bgOverlay"></div>
-
+  <!-- bgOverlay removed -->
   <!-- AUTH OVERLAY -->
   <div id="authOverlay">
     <div class="auth-box">
@@ -305,7 +288,7 @@
   const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
   // TMDb API
-  const TMDB_API_KEY = '9b9dd1ae2eafae23ed2c2c675d2b4407'; // <-- Use your TMDb API key!
+  const TMDB_API_KEY = '9b9dd1ae2eafae23ed2c2c675d2b4407';
 
   // Ratings Icons
   const IMDB_ICON = 'https://upload.wikimedia.org/wikipedia/commons/6/69/IMDB_Logo_2016.svg';
@@ -417,47 +400,10 @@
 
   // TMDb helpers
   function getPosterUrl(path) {
-    return path ? `https://image.tmdb.org/t/p/w300${path}` : 'https://via.placeholder.com/100x150';
+    return path ? `https://image.tmdb.org/t/p/w300${path}` : 'https://placehold.co/100x150?text=No+Image';
   }
   function getYear(date) {
     return date ? date.split('-')[0] : '';
-  }
-
-  // Dynamic HD poster background
-  const TMDB_IMAGE_BG = "https://image.tmdb.org/t/p/w1280";
-  let bgPosters = [];
-  let bgIndex = 0;
-  let bgInterval = null;
-
-  async function fetchLatestPosters() {
-    try {
-      const res = await fetch(
-        `https://api.themoviedb.org/3/movie/now_playing?api_key=${TMDB_API_KEY}&language=en-US&page=1`
-      );
-      const data = await res.json();
-      bgPosters = (data.results || [])
-        .filter(m => m.poster_path)
-        .map(m => TMDB_IMAGE_BG + m.poster_path);
-      bgPosters = bgPosters.sort(() => Math.random() - 0.5);
-      if(bgPosters.length) {
-        cycleBgPosters();
-      } else {
-        document.body.style.backgroundImage = "";
-      }
-    } catch (err) {
-      console.error("Couldn't fetch backgrounds:", err);
-    }
-  }
-
-  function cycleBgPosters() {
-    if (bgPosters.length === 0) {
-      document.body.style.backgroundImage = "";
-      return;
-    }
-    document.body.style.backgroundImage = `url('${bgPosters[bgIndex]}')`;
-    bgIndex = (bgIndex + 1) % bgPosters.length;
-    if(bgInterval) clearTimeout(bgInterval);
-    bgInterval = setTimeout(cycleBgPosters, 7000);
   }
 
   // Random movie suggestions from TMDb
@@ -641,7 +587,6 @@
     }
     await fetchPlexTitles();
     fetchRandomMovies();
-    fetchLatestPosters();
   };
 </script>
 </body>
