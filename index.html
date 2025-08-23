@@ -361,6 +361,27 @@
       outline: 2px solid #e50914;
       outline-offset: 2px;
     }
+    /* Modal styles */
+    #reportIssueModal {
+      display: none; position:fixed; top:0; left:0; width:100vw; height:100vh; z-index:10000;
+      background:rgba(0,0,0,0.85); align-items:center; justify-content:center;
+    }
+    #reportIssueModal .modal-content {
+      background:#222; color:#fff; padding:2rem; border-radius:10px; max-width:340px; width:95vw;
+      box-shadow:0 6px 30px #e5091430; border:2px solid #e50914;
+      display:flex; flex-direction:column; align-items:center;
+    }
+    #reportIssueModal select, #reportIssueModal textarea {
+      padding:10px; width:100%; margin-bottom:1rem; border-radius:6px; border:none;
+      background:#181818; color:#fff;
+    }
+    #reportIssueModal textarea {
+      min-height:60px;
+    }
+    #reportIssueModal .danflix-button {
+      margin-top: 0;
+      margin-bottom: 0;
+    }
   </style>
 </head>
 <body class="blurred">
@@ -403,6 +424,28 @@
     <div id="results"></div>
     <div class="admin-link">
       <a href="requests.html">Go to Admin (Requests)</a>
+    </div>
+  </div>
+
+  <!-- Report Issue Modal -->
+  <div id="reportIssueModal">
+    <div class="modal-content">
+      <h2 style="color:#e50914;">Report Issue</h2>
+      <div id="reportMovieTitle" style="font-weight:bold; margin-bottom:1rem;"></div>
+      <select id="reportIssueType">
+        <option value="">Select Issue Type</option>
+        <option value="Does not work">Does not work</option>
+        <option value="Bad audio">Bad audio</option>
+        <option value="Bad video quality">Bad video quality</option>
+        <option value="Missing subtitles">Missing subtitles</option>
+        <option value="Other">Other (describe below)</option>
+      </select>
+      <textarea id="reportIssueDesc" placeholder="Additional details (optional)"></textarea>
+      <div style="display:flex; gap:1em;">
+        <button onclick="submitReportIssue()" class="danflix-button">Submit</button>
+        <button onclick="closeReportIssueModal()" class="danflix-button" style="background:#181818; color:#e50914; border:2px solid #e50914;">Cancel</button>
+      </div>
+      <div id="reportIssueError" style="color:#ff5757; margin-top:1em; display:none;"></div>
     </div>
   </div>
 
@@ -565,6 +608,12 @@
             </div>
             <p>${movie.overview || "No description available."}</p>
             <button class='danflix-button' disabled>On DanFlix</button>
+            <button class='danflix-button report-issue-btn' onclick='openReportIssueModal(${JSON.stringify({
+              title: movie.title,
+              release_date: movie.release_date,
+              imdbID: movie.imdbID || "",
+              poster: getPosterUrl(movie.poster_path)
+            })})'>Report Issue</button>
           </div>`;
         container.appendChild(div);
       } catch (err) {
@@ -623,26 +672,47 @@
         const imdbRating = movie.vote_average ? movie.vote_average.toFixed(1) : "N/A";
         const div = document.createElement("div");
         div.className = "movie";
-        div.innerHTML = `
-          <img src="${getPosterUrl(movie.poster_path)}" />
-          <div>
-            <h3>${highlightMatch(movie.title)} (${getYear(movie.release_date)})</h3>
-            <div class="ratings">
-              <span class="score">
-                <img src="${IMDB_ICON}" alt="IMDb" title="TMDb Average" />${imdbRating}
-              </span>
-            </div>
-            <p>${movie.overview || "No description available."}</p>
-            <button ${alreadyOnPlex ? "class='danflix-button' disabled" : `onclick='requestMovie(${JSON.stringify({
-              Title: movie.title,
-              Year: getYear(movie.release_date),
-              imdbID: "",
-              Plot: movie.overview,
-              Poster: getPosterUrl(movie.poster_path)
-            })})'`}>
-              ${alreadyOnPlex ? "On DanFlix" : "Request"}
-            </button>
-          </div>`;
+        if (alreadyOnPlex) {
+          div.innerHTML = `
+            <img src="${getPosterUrl(movie.poster_path)}" />
+            <div>
+              <h3>${highlightMatch(movie.title)} (${getYear(movie.release_date)})</h3>
+              <div class="ratings">
+                <span class="score">
+                  <img src="${IMDB_ICON}" alt="IMDb" title="TMDb Average" />${imdbRating}
+                </span>
+              </div>
+              <p>${movie.overview || "No description available."}</p>
+              <button class='danflix-button' disabled>On DanFlix</button>
+              <button class='danflix-button report-issue-btn' onclick='openReportIssueModal(${JSON.stringify({
+                title: movie.title,
+                release_date: movie.release_date,
+                imdbID: movie.imdbID || "",
+                poster: getPosterUrl(movie.poster_path)
+              })})'>Report Issue</button>
+            </div>`;
+        } else {
+          div.innerHTML = `
+            <img src="${getPosterUrl(movie.poster_path)}" />
+            <div>
+              <h3>${highlightMatch(movie.title)} (${getYear(movie.release_date)})</h3>
+              <div class="ratings">
+                <span class="score">
+                  <img src="${IMDB_ICON}" alt="IMDb" title="TMDb Average" />${imdbRating}
+                </span>
+              </div>
+              <p>${movie.overview || "No description available."}</p>
+              <button onclick='requestMovie(${JSON.stringify({
+                Title: movie.title,
+                Year: getYear(movie.release_date),
+                imdbID: "",
+                Plot: movie.overview,
+                Poster: getPosterUrl(movie.poster_path)
+              })})' class='danflix-button'>
+                Request
+              </button>
+            </div>`;
+        }
         resultsContainer.appendChild(div);
       }
     } catch (err) {
@@ -688,6 +758,76 @@
       alert(`Danflix Thanks you, Allow 24-48 hours for "${movie.Title}"`);
     } else {
       alert("Error submitting request: " + text);
+    }
+  }
+
+  // Report Issue Modal logic
+  let reportMovieData = null;
+
+  function openReportIssueModal(movie) {
+    reportMovieData = movie;
+    document.getElementById("reportMovieTitle").innerText = `${movie.title || movie.Title} (${getYear(movie.release_date || movie.Year)})`;
+    document.getElementById("reportIssueType").value = "";
+    document.getElementById("reportIssueDesc").value = "";
+    document.getElementById("reportIssueError").style.display = "none";
+    document.getElementById("reportIssueModal").style.display = "flex";
+  }
+
+  function closeReportIssueModal() {
+    document.getElementById("reportIssueModal").style.display = "none";
+    document.getElementById("reportIssueError").style.display = "none";
+    reportMovieData = null;
+  }
+
+  async function submitReportIssue() {
+    const type = document.getElementById("reportIssueType").value;
+    const desc = document.getElementById("reportIssueDesc").value.trim();
+    const errorDiv = document.getElementById("reportIssueError");
+
+    if (!type) {
+      errorDiv.innerText = "Please select an issue type.";
+      errorDiv.style.display = "block";
+      return;
+    }
+
+    const user = await getCurrentUser();
+    if (!user) {
+      closeReportIssueModal();
+      alert("Please log in to report an issue.");
+      showAuthOverlay();
+      return;
+    }
+
+    // Build report object
+    const movieTitle = reportMovieData.title || reportMovieData.Title;
+    const movieYear = getYear(reportMovieData.release_date || reportMovieData.Year);
+
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/requests`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": SUPABASE_KEY,
+        "Authorization": `Bearer ${SUPABASE_KEY}`,
+        "Prefer": "return=representation"
+      },
+      body: JSON.stringify([{
+        title: movieTitle,
+        year: movieYear,
+        imdbID: reportMovieData.imdbID || "",
+        description: `ISSUE REPORT: ${type}${desc ? " - " + desc : ""}`,
+        poster: reportMovieData.poster || reportMovieData.Poster,
+        user_id: user.id,
+        user_email: user.email,
+        type: "issue"
+      }])
+    });
+    const text = await res.text();
+    if (res.ok) {
+      closeReportIssueModal();
+      alert(`Issue reported for "${movieTitle}". Thank you!`);
+    } else {
+      errorDiv.innerText = "Error submitting report: " + text;
+      errorDiv.style.display = "block";
     }
   }
 
