@@ -7,14 +7,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    /* Netflix-style dark background and red accents */
-    html, body {
-      height: 100%;
-      width: 100%;
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+    html, body { height: 100%; width: 100%; margin: 0; padding: 0; box-sizing: border-box; }
     body {
       font-family: 'Roboto', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       background: linear-gradient(180deg, #181818 0%, #141414 100%);
@@ -23,345 +16,113 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      /* Added for mobile scrolling */
       overflow-x: hidden;
     }
-    body.blurred #pageContent {
-      filter: blur(8px);
-      pointer-events: none;
-      user-select: none;
-    }
+    body.blurred #pageContent { filter: blur(8px); pointer-events: none; user-select: none; }
     #authOverlay {
-      position: fixed;
-      top: 0; left: 0;
-      width: 100vw; height: 100vh;
-      backdrop-filter: blur(10px);
-      background-color: rgba(0,0,0,0.85);
-      z-index: 9999;
-      display: flex;
-      justify-content: center;
-      align-items: center;
+      position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+      backdrop-filter: blur(10px); background-color: rgba(0,0,0,0.85); z-index: 9999;
+      display: flex; justify-content: center; align-items: center;
     }
     .auth-box {
-      background: rgba(30,30,30,0.97);
-      padding: 2rem 2.5rem;
-      border-radius: 10px;
-      text-align: center;
-      box-shadow: 0 4px 30px 0 rgba(0,0,0,0.7);
-      min-width: 320px;
-      max-width: 350px;
-      width: 100%;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      border: 2px solid #e50914;
+      background: rgba(30,30,30,0.97); padding: 2rem 2.5rem; border-radius: 10px; text-align: center;
+      box-shadow: 0 4px 30px 0 rgba(0,0,0,0.7); min-width: 320px; max-width: 350px; width: 100%;
+      display: flex; flex-direction: column; align-items: center; border: 2px solid #e50914;
     }
     .auth-box input {
-      padding: 14px; /* Increased for mobile touch */
-      font-size: 1.1rem;
-      border: none;
-      border-radius: 6px;
-      width: 100%;
-      box-sizing: border-box;
-      margin-bottom: 0.9rem;
-      background: #222;
-      color: #fff;
-      outline: none;
+      padding: 14px; font-size: 1.1rem; border: none; border-radius: 6px; width: 100%; box-sizing: border-box;
+      margin-bottom: 0.9rem; background: #222; color: #fff; outline: none;
     }
-    .auth-box input:focus {
-      border: 2px solid #e50914;
-      background: #181818;
-    }
-    .auth-box img {
-      width: 280px;
-      height: auto;
-      margin-bottom: 1rem;
-      filter: drop-shadow(0 0 8px #e50914);
-    }
+    .auth-box input:focus { border: 2px solid #e50914; background: #181818; }
+    .auth-box img { width: 280px; height: auto; margin-bottom: 1rem; filter: drop-shadow(0 0 8px #e50914); }
     .auth-box button {
-      margin-top: 0.2rem;
-      padding: 16px 0; /* Increased touch size */
-      background-color: #e50914;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      font-weight: bold;
-      width: 100%;
-      font-size: 1.15rem;
-      letter-spacing: 1px;
-      box-shadow: 0 2px 8px 0 #e5091440;
+      margin-top: 0.2rem; padding: 16px 0; background-color: #e50914; color: white; border: none; border-radius: 6px;
+      cursor: pointer; font-weight: bold; width: 100%; font-size: 1.15rem; letter-spacing: 1px; box-shadow: 0 2px 8px 0 #e5091440;
     }
-    .auth-box button:active {
-      background-color: #b00612;
-    }
-    .auth-switch {
-      margin: 1rem 0 0.5rem 0;
-      font-size: 1rem;
-      color: #e50914;
-      cursor: pointer;
-      text-decoration: underline;
-    }
-    .auth-box p {
-      margin: 0.5rem 0 0 0;
-      color: #ff5757;
-      display: none;
-      font-size: 0.98rem;
-    }
+    .auth-box button:active { background-color: #b00612; }
+    .auth-switch { margin: 1rem 0 0.5rem 0; font-size: 1rem; color: #e50914; cursor: pointer; text-decoration: underline; }
+    .auth-box p { margin: 0.5rem 0 0 0; color: #ff5757; display: none; font-size: 0.98rem; }
     #userWelcome {
-      margin-bottom: 2rem;
-      background: rgba(25,25,25,0.98);
-      border-radius: 10px;
-      box-shadow: 0 2px 12px rgba(0,0,0,0.3);
-      padding: 1.2rem; /* Slightly larger for mobile */
-      width: 100%;
-      max-width: 340px;
-      text-align: center;
-      position: relative;
-      z-index: 1;
-      border: 2px solid #e50914;
-      color: #fff;
-      font-weight: 500;
-      margin-top: 2rem;
-      font-size: 1.08rem;
+      margin-bottom: 2rem; background: rgba(25,25,25,0.98); border-radius: 10px; box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+      padding: 1.2rem; width: 100%; max-width: 340px; text-align: center; position: relative; z-index: 1;
+      border: 2px solid #e50914; color: #fff; font-weight: 500; margin-top: 2rem; font-size: 1.08rem;
     }
     #logo {
-      width: 340px;
-      height: auto;
-      margin-bottom: 1.5rem;
-      display: block;
-      margin-left: auto;
-      margin-right: auto;
-      position: relative;
-      z-index: 1;
-      filter: drop-shadow(0 0 16px #e50914aa);
-      max-width: 95vw; /* Ensures logo fits on small screens */
+      width: 340px; height: auto; margin-bottom: 1.5rem; display: block; margin-left: auto; margin-right: auto;
+      position: relative; z-index: 1; filter: drop-shadow(0 0 16px #e50914aa); max-width: 95vw;
     }
     input#searchInput {
-      display: block;
-      margin-left: auto;
-      margin-right: auto;
-      padding: 17px;
-      font-size: 1.2rem;
-      width: 96vw;
-      max-width: 400px;
-      border: none;
-      border-radius: 8px;
-      box-sizing: border-box;
-      margin-bottom: 2vw;
-      position: relative;
-      z-index: 1;
-      background: #232323;
-      color: #fff;
-      outline: none;
-      box-shadow: 0 2px 8px #e5091420;
+      display: block; margin-left: auto; margin-right: auto; padding: 17px; font-size: 1.2rem; width: 96vw; max-width: 400px;
+      border: none; border-radius: 8px; box-sizing: border-box; margin-bottom: 2vw; position: relative; z-index: 1;
+      background: #232323; color: #fff; outline: none; box-shadow: 0 2px 8px #e5091420;
     }
-    input#searchInput:focus {
-      border: 2px solid #e50914;
-      background: #181818;
-    }
+    input#searchInput:focus { border: 2px solid #e50914; background: #181818; }
     .movie {
       background: linear-gradient(90deg, #232323 80%, #181818 100%);
-      border-radius: 8px;
-      padding: 1rem;
-      display: flex;
-      gap: 1rem;
-      width: 100%;
-      max-width: 400px; /* slightly bigger for mobile cards */
-      margin-top: 1rem;
-      box-shadow: 0 4px 16px 0 #00000060;
-      position: relative;
-      z-index: 1;
-      border: 2px solid #181818;
-      color: #fff;
-      transition: box-shadow 0.2s;
-      align-items: flex-start;
+      border-radius: 8px; padding: 1rem; display: flex; gap: 1rem; width: 100%; max-width: 400px;
+      margin-top: 1rem; box-shadow: 0 4px 16px 0 #00000060; position: relative; z-index: 1;
+      border: 2px solid #181818; color: #fff; transition: box-shadow 0.2s; align-items: flex-start;
     }
-    .movie:hover {
-      box-shadow: 0 8px 24px 0 #e5091430;
-      border-color: #e50914;
-    }
+    .movie:hover { box-shadow: 0 8px 24px 0 #e5091430; border-color: #e50914; }
     .movie img {
-      width: 100px;
-      height: 150px;
-      object-fit: cover;
-      border-radius: 4px;
-      background: #171717;
-      box-shadow: 0 2px 6px #00000040;
-      border: 1.5px solid #e50914;
-      flex-shrink: 0;
+      width: 100px; height: 150px; object-fit: cover; border-radius: 4px; background: #171717;
+      box-shadow: 0 2px 6px #00000040; border: 1.5px solid #e50914; flex-shrink: 0;
     }
-    img:not(.auth-logo) {
-      border-radius: 4px;
-    }
+    img:not(.auth-logo) { border-radius: 4px; }
     button, .danflix-button {
-      padding: 13px 24px; /* Increased for mobile touch */
-      margin-top: 10px;
-      background-color: #e50914;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 1.07rem;
-      font-weight: bold;
-      transition: all 0.3s ease;
-      text-transform: none;
-      text-align: center;
-      display: inline-block;
-      text-decoration: none;
-      min-width: 120px; /* Accessible touch width */
+      padding: 13px 24px; margin-top: 10px; background-color: #e50914; color: white; border: none; border-radius: 6px;
+      cursor: pointer; font-size: 1.07rem; font-weight: bold; transition: all 0.3s ease; text-transform: none; text-align: center;
+      display: inline-block; text-decoration: none; min-width: 120px;
     }
     button:hover, .danflix-button:hover, button:active, .danflix-button:active {
-      background-color: #b00612;
-      color: white;
-      transform: scale(1.04);
-      box-shadow: 0 2px 10px 0 #e5091430;
+      background-color: #b00612; color: white; transform: scale(1.04); box-shadow: 0 2px 10px 0 #e5091430;
     }
     button:disabled, .danflix-button:disabled {
-      background-color: #222;
-      color: #666666;
-      cursor: not-allowed;
-      border: none;
-      transform: none;
-      border: 1.5px solid #e50914;
+      background-color: #222; color: #666666; cursor: not-allowed; border: none; transform: none; border: 1.5px solid #e50914;
     }
     .danflix-button {
-      background-color: #181818;
-      color: #e50914;
-      border: 2px solid #e50914;
-      font-size: 1.07rem;
-      text-transform: none;
-      margin-top: 10px;
-      box-sizing: border-box;
-      padding: 13px 24px;
-      font-weight: bold;
-      letter-spacing: 1px;
+      background-color: #181818; color: #e50914; border: 2px solid #e50914; font-size: 1.07rem; text-transform: none; margin-top: 10px;
+      box-sizing: border-box; padding: 13px 24px; font-weight: bold; letter-spacing: 1px;
     }
     .section-title {
-      font-size: 1.7rem;
-      margin-top: 2rem;
-      text-align: center;
-      font-weight: bold;
-      position: relative;
-      z-index: 1;
-      color: #fff;
-      text-shadow: 0 2px 12px #e5091410;
-      letter-spacing: 1px;
+      font-size: 1.7rem; margin-top: 2rem; text-align: center; font-weight: bold; position: relative; z-index: 1;
+      color: #fff; text-shadow: 0 2px 12px #e5091410; letter-spacing: 1px;
     }
-    .highlight {
-      background-color: #e50914;
-      color: #fff;
-      padding: 0 2px;
-      border-radius: 2px;
-    }
+    .highlight { background-color: #e50914; color: #fff; padding: 0 2px; border-radius: 2px; }
     .admin-link {
-      margin-top: 2rem;
-      font-size: 1.08rem;
-      position: relative;
-      z-index: 1;
-      text-align: center;
+      margin-top: 2rem; font-size: 1.08rem; position: relative; z-index: 1; text-align: center;
     }
     .admin-link a {
-      color: #e50914;
-      text-decoration: underline;
-      transition: color 0.2s;
-      font-weight: bold;
-      letter-spacing: 0.5px;
-      font-size: 1.08rem;
+      color: #e50914; text-decoration: underline; transition: color 0.2s; font-weight: bold; letter-spacing: 0.5px; font-size: 1.08rem;
     }
-    .admin-link a:hover {
-      color: #fff;
-      text-shadow: 0 2px 8px #e5091440;
-    }
+    .admin-link a:hover { color: #fff; text-shadow: 0 2px 8px #e5091440; }
     @media (max-width: 600px) {
-      html, body {
-        width: 100vw;
-        max-width: 100vw;
-        overflow-x: hidden;
-      }
-      .auth-box img {
-        width: 110px;
-      }
-      #logo {
-        width: 95vw;
-        min-width: 140px;
-        max-width: 95vw;
-      }
-      .movie img {
-        width: 70px;
-        height: 105px;
-      }
-      button, .danflix-button {
-        font-size: 1.05rem;
-        padding: 13px 0;
-        min-width: 100px;
-      }
-      .movie, #userWelcome {
-        max-width: 98vw;
-        min-width: 0;
-        padding: 0.8rem;
-        font-size: 0.98rem;
-      }
-      input#searchInput {
-        font-size: 1.08rem;
-        max-width: 95vw;
-        padding: 13px;
-      }
-      .section-title {
-        font-size: 1.18rem;
-      }
-      .ratings {
-        font-size: 0.95rem;
-      }
+      html, body { width: 100vw; max-width: 100vw; overflow-x: hidden; }
+      .auth-box img { width: 110px; }
+      #logo { width: 95vw; min-width: 140px; max-width: 95vw; }
+      .movie img { width: 70px; height: 105px; }
+      button, .danflix-button { font-size: 1.05rem; padding: 13px 0; min-width: 100px; }
+      .movie, #userWelcome { max-width: 98vw; min-width: 0; padding: 0.8rem; font-size: 0.98rem; }
+      input#searchInput { font-size: 1.08rem; max-width: 95vw; padding: 13px; }
+      .section-title { font-size: 1.18rem; }
+      .ratings { font-size: 0.95rem; }
     }
     @media (max-width: 400px) {
-      .auth-box {
-        min-width: 90vw;
-        max-width: 97vw;
-        padding: 1.2rem 0.5rem;
-      }
-      .movie, #userWelcome {
-        max-width: 99vw;
-        padding: 0.5rem;
-      }
-      input#searchInput {
-        max-width: 97vw;
-      }
+      .auth-box { min-width: 90vw; max-width: 97vw; padding: 1.2rem 0.5rem; }
+      .movie, #userWelcome { max-width: 99vw; padding: 0.5rem; }
+      input#searchInput { max-width: 97vw; }
     }
     .ratings {
-      font-size: 1rem;
-      color: #eee;
-      margin: 0.4em 0 0.4em 0;
-      display: flex;
-      gap: 1.2em;
-      align-items: center;
-      flex-wrap: wrap;
+      font-size: 1rem; color: #eee; margin: 0.4em 0 0.4em 0; display: flex; gap: 1.2em; align-items: center; flex-wrap: wrap;
     }
     .ratings .score {
-      font-weight: bold;
-      color: #e50914;
-      margin-right: 6px;
-      display: flex;
-      align-items: center;
-      gap: 0.2em;
-      font-size: 1.08em;
+      font-weight: bold; color: #e50914; margin-right: 6px; display: flex; align-items: center; gap: 0.2em; font-size: 1.08em;
     }
     .ratings img {
-      vertical-align: middle;
-      width: 42px;
-      height: 22px;
-      margin-right: 3px;
-      border-radius: 0;
-      box-shadow: none;
-      background: none;
+      vertical-align: middle; width: 42px; height: 22px; margin-right: 3px; border-radius: 0; box-shadow: none; background: none;
       filter: brightness(1.2) drop-shadow(0 0 4px #e5091440);
     }
-    /* Added focus style for accessibility */
-    button:focus, .danflix-button:focus, input:focus {
-      outline: 2px solid #e50914;
-      outline-offset: 2px;
-    }
-    /* Modal styles */
+    button:focus, .danflix-button:focus, input:focus { outline: 2px solid #e50914; outline-offset: 2px; }
     #reportIssueModal {
       display: none; position:fixed; top:0; left:0; width:100vw; height:100vh; z-index:10000;
       background:rgba(0,0,0,0.85); align-items:center; justify-content:center;
@@ -375,17 +136,11 @@
       padding:10px; width:100%; margin-bottom:1rem; border-radius:6px; border:none;
       background:#181818; color:#fff;
     }
-    #reportIssueModal textarea {
-      min-height:60px;
-    }
-    #reportIssueModal .danflix-button {
-      margin-top: 0;
-      margin-bottom: 0;
-    }
+    #reportIssueModal textarea { min-height:60px; }
+    #reportIssueModal .danflix-button { margin-top: 0; margin-bottom: 0; }
   </style>
 </head>
 <body class="blurred">
-  <!-- AUTH OVERLAY -->
   <div id="authOverlay">
     <div class="auth-box">
       <img src="Danflix.png" alt="Danflix Logo" class="auth-logo"/>
@@ -409,13 +164,10 @@
       </div>
     </div>
   </div>
-
-  <!-- Welcome + Main Content -->
   <div id="userWelcome" style="display:none;">
     <span id="userEmail"></span>
     <button onclick="logout()" style="background:#e50914;">Logout</button>
   </div>
-
   <div id="pageContent">
     <img id="logo" src="Danflix.png" alt="Danflix Logo" />
     <input id="searchInput" placeholder="Search for a title..." oninput="searchMovies()" />
@@ -426,8 +178,6 @@
       <a href="requests.html">Go to Admin (Requests)</a>
     </div>
   </div>
-
-  <!-- Report Issue Modal -->
   <div id="reportIssueModal">
     <div class="modal-content">
       <h2 style="color:#e50914;">Report Issue</h2>
@@ -436,8 +186,8 @@
         <option value="">Select Issue Type</option>
         <option value="Does not work">Does not work</option>
         <option value="Bad audio">Bad audio</option>
-        <option value="Bad video quality">Bad video quality</option>
-        <option value="Missing subtitles">Missing subtitles</option>
+        <option value="Wrong Movie">Wrong Movie</option>
+        <option value="Wrong Tv Show">Wrong Tv Show</option>
         <option value="Other">Other (describe below)</option>
       </select>
       <textarea id="reportIssueDesc" placeholder="Additional details (optional)"></textarea>
@@ -448,23 +198,14 @@
       <div id="reportIssueError" style="color:#ff5757; margin-top:1em; display:none;"></div>
     </div>
   </div>
-
 <script>
-  // Supabase setup
   const SUPABASE_URL = 'https://vthwucdhiuewqfljbafu.supabase.co';
   const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ0aHd1Y2RoaXVld3FmbGpiYWZ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU2MDY3NjYsImV4cCI6MjA3MTE4Mjc2Nn0.JaLXafZhYMYQwjuZErwrGph080jWYqOXhkpjRRP9gg0';
   const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-  // TMDb API
   const TMDB_API_KEY = '9b9dd1ae2eafae23ed2c2c675d2b4407';
-
-  // Ratings Icons
   const IMDB_ICON = 'https://upload.wikimedia.org/wikipedia/commons/6/69/IMDB_Logo_2016.svg';
-
   let plexTitles = [];
   let plexReady = false;
-
-  // Auth overlay UI switching
   function showSignup() {
     document.getElementById('loginForm').style.display = 'none';
     document.getElementById('signupForm').style.display = '';
@@ -473,8 +214,6 @@
     document.getElementById('signupForm').style.display = 'none';
     document.getElementById('loginForm').style.display = '';
   }
-
-  // AUTH section logic
   async function signup() {
     document.getElementById('signupError').style.display = "none";
     const email = document.getElementById('signupEmail').value;
@@ -488,7 +227,6 @@
       showLogin();
     }
   }
-
   async function login() {
     document.getElementById('loginError').style.display = "none";
     const email = document.getElementById('loginEmail').value;
@@ -503,29 +241,24 @@
       hideAuthOverlay();
     }
   }
-
   function showUser(user) {
     if (!user) return;
     document.getElementById('userWelcome').style.display = 'block';
     document.getElementById('userEmail').innerText = `Welcome, ${user.email}`;
   }
-
   function hideUser() {
     document.getElementById('userWelcome').style.display = 'none';
     document.getElementById('userEmail').innerText = '';
   }
-
   async function logout() {
     await supabase.auth.signOut();
     hideUser();
     showAuthOverlay();
   }
-
   async function getCurrentUser() {
     const { data } = await supabase.auth.getUser();
     return data?.user || null;
   }
-
   function showAuthOverlay() {
     document.getElementById('authOverlay').style.display = 'flex';
     document.body.classList.add('blurred');
@@ -535,16 +268,15 @@
     document.getElementById('authOverlay').style.display = 'none';
     document.body.classList.remove('blurred');
   }
-
-  // Highlight search matches
   function highlightMatch(title) {
     const searchTerm = document.getElementById("searchInput").value.trim();
     if (!searchTerm) return title;
     const regex = new RegExp(`(${searchTerm})`, "gi");
     return title.replace(regex, `<span class="highlight">$1</span>`);
   }
-
-  // Fetch plex_titles.json instead of Plex server directly
+  function normalizeSearchText(s) {
+    return s ? s.replace(/[^a-zA-Z0-9]/g, "").toLowerCase() : "";
+  }
   async function fetchPlexTitles() {
     try {
       const res = await fetch("plex_titles.json");
@@ -555,7 +287,6 @@
       alert("Could not load Plex titles list. 'On Danflix' status may not be accurate.");
     }
   }
-
   function normalizeTitle(title) {
     return title.replace(/\s*[\(\[\{].*?[\)\]\}]\s*/g, '').trim().toLowerCase();
   }
@@ -564,16 +295,12 @@
     const normTitle = normalizeTitle(title);
     return plexTitles.some(plexTitle => normalizeTitle(plexTitle) === normTitle);
   }
-
-  // TMDb helpers
   function getPosterUrl(path) {
     return path ? `https://image.tmdb.org/t/p/w300${path}` : 'https://placehold.co/100x150?text=No+Image';
   }
   function getYear(date) {
     return date ? date.split('-')[0] : '';
   }
-
-  // Random movie suggestions from TMDb
   async function fetchRandomMovies() {
     const container = document.getElementById("randomMovies");
     if (!plexReady || !plexTitles.length) {
@@ -581,22 +308,17 @@
       return;
     }
     container.innerHTML = "<p></p>";
-
-    // Shuffle and pick 6 random titles
     const shuffled = plexTitles.sort(() => Math.random() - 0.5).slice(0, 6);
-
     for (const title of shuffled) {
       try {
-        // Fetch from TMDb
         const tmdbRes = await fetch(
           `https://api.themoviedb.org/3/search/movie?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(title)}`
         );
         const tmdbData = await tmdbRes.json();
         const movie = tmdbData.results && tmdbData.results[0];
         if (!movie) continue;
-
+        if (movie.vote_count < 250 || movie.popularity < 10) continue;
         const imdbRating = movie.vote_average ? movie.vote_average.toFixed(1) : "N/A";
-
         const div = document.createElement("div");
         div.className = "movie";
         div.innerHTML = `
@@ -617,23 +339,18 @@
           </div>`;
         container.appendChild(div);
       } catch (err) {
-        // Ignore failed fetches and continue
         continue;
       }
     }
   }
-
-  // Search movies via TMDb
   async function searchMovies() {
     const query = document.getElementById("searchInput").value.trim();
     const resultsContainer = document.getElementById("results");
     const randomMovies = document.getElementById("randomMovies");
-
     if (!plexReady) {
       resultsContainer.innerHTML = "<p></p>";
       return;
     }
-
     if (!query) {
       randomMovies.style.display = 'block';
       resultsContainer.innerHTML = '';
@@ -641,73 +358,103 @@
       return;
     }
     randomMovies.style.display = 'none';
-    resultsContainer.innerHTML = "<p>Searching...</p>";
+    resultsContainer.innerHTML = "<p></p>";
     try {
-      const res = await fetch(`https://api.themoviedb.org/3/search/movie?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(query)}`);
-      const data = await res.json();
-      resultsContainer.innerHTML = "";
+      const [movieRes, tvRes] = await Promise.all([
+        fetch(`https://api.themoviedb.org/3/search/movie?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(query)}`),
+        fetch(`https://api.themoviedb.org/3/search/tv?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(query)}`)
+      ]);
+      const movieData = await movieRes.json();
+      const tvData = await tvRes.json();
 
-      const searchTerm = query.trim().toLowerCase();
-      let displayMovies = (data.results || []).filter(movie => movie.title);
+      let allResults = [
+        ...(movieData.results || []).map(m => ({ ...m, media_type: 'movie' })),
+        ...(tvData.results || []).map(t => ({ ...t, media_type: 'tv' }))
+      ];
 
-      function getMatchType(title, term) {
-        const normTitle = title.trim().toLowerCase();
-        if (normTitle === term) return 2;
-        if (normTitle.includes(term)) return 1;
+      const normTerm = normalizeSearchText(query);
+
+      function getMatchScore(item) {
+        const rawTitle = item.media_type === 'movie' ? item.title : item.name;
+        const normTitle = normalizeSearchText(rawTitle);
+        // Highest priority: exact match, then startsWith, then includes, then popularity/votes
+        if (normTitle === normTerm) return 100;
+        if (normTitle.startsWith(normTerm)) return 90;
+        if (normTitle.includes(normTerm)) return 75;
+        // If year is specified in query, check for year match
+        let yearFromInput = null;
+        const yearMatch = query.match(/\b(19|20)\d{2}\b/);
+        if (yearMatch) yearFromInput = yearMatch[0];
+        const itemYear = item.media_type === 'movie'
+          ? getYear(item.release_date)
+          : getYear(item.first_air_date);
+        if (yearFromInput && itemYear === yearFromInput) return 70;
         return 0;
       }
-      displayMovies.sort((a, b) => {
-        const aType = getMatchType(a.title, searchTerm);
-        const bType = getMatchType(b.title, searchTerm);
-        return bType - aType;
+
+      allResults.forEach(item => {
+        item._matchScore = getMatchScore(item);
       });
 
-      if (displayMovies.length === 0) {
+      allResults.sort((a, b) => {
+        if (b._matchScore !== a._matchScore) return b._matchScore - a._matchScore;
+        // For same score prefer most votes/popularity
+        if ((b.vote_count || 0) !== (a.vote_count || 0)) return (b.vote_count || 0) - (a.vote_count || 0);
+        return (b.popularity || 0) - (a.popularity || 0);
+      });
+
+      allResults = allResults.slice(0, 10);
+
+      if (allResults.length === 0) {
         resultsContainer.innerHTML = "<p>No results found.</p>";
         return;
       }
 
-      for (const movie of displayMovies) {
-        const alreadyOnPlex = isOnPlex(movie.title);
-        const imdbRating = movie.vote_average ? movie.vote_average.toFixed(1) : "N/A";
-        const div = document.createElement("div");
+      for (const item of allResults) {
+        let title = item.media_type === 'movie' ? item.title : item.name;
+        let year = item.media_type === 'movie' ? getYear(item.release_date) : getYear(item.first_air_date);
+        let overview = item.overview || "No description available.";
+        let poster = getPosterUrl(item.poster_path);
+        let alreadyOnPlex = isOnPlex(title);
+        let imdbRating = item.vote_average ? item.vote_average.toFixed(1) : "N/A";
+        let div = document.createElement("div");
         div.className = "movie";
         if (alreadyOnPlex) {
           div.innerHTML = `
-            <img src="${getPosterUrl(movie.poster_path)}" />
+            <img src="${poster}" />
             <div>
-              <h3>${highlightMatch(movie.title)} (${getYear(movie.release_date)})</h3>
+              <h3>${highlightMatch(title)} (${year}) ${item.media_type === 'tv' ? '<span style="background:#e50914;color:#fff;border-radius:3px;padding:0 3px;font-size:0.95em;">TV</span>' : ''}</h3>
               <div class="ratings">
                 <span class="score">
                   <img src="${IMDB_ICON}" alt="IMDb" title="TMDb Average" />${imdbRating}
                 </span>
               </div>
-              <p>${movie.overview || "No description available."}</p>
+              <p>${overview}</p>
               <button class='danflix-button' disabled>On DanFlix</button>
               <button class='danflix-button report-issue-btn' onclick='openReportIssueModal(${JSON.stringify({
-                title: movie.title,
-                release_date: movie.release_date,
-                imdbID: movie.imdbID || "",
-                poster: getPosterUrl(movie.poster_path)
+                title: title,
+                release_date: item.release_date || item.first_air_date,
+                imdbID: item.imdbID || "",
+                poster: poster
               })})'>Report Issue</button>
             </div>`;
         } else {
           div.innerHTML = `
-            <img src="${getPosterUrl(movie.poster_path)}" />
+            <img src="${poster}" />
             <div>
-              <h3>${highlightMatch(movie.title)} (${getYear(movie.release_date)})</h3>
+              <h3>${highlightMatch(title)} (${year}) ${item.media_type === 'tv' ? '<span style="background:#e50914;color:#fff;border-radius:3px;padding:0 3px;font-size:0.95em;">TV</span>' : ''}</h3>
               <div class="ratings">
                 <span class="score">
                   <img src="${IMDB_ICON}" alt="IMDb" title="TMDb Average" />${imdbRating}
                 </span>
               </div>
-              <p>${movie.overview || "No description available."}</p>
+              <p>${overview}</p>
               <button onclick='requestMovie(${JSON.stringify({
-                Title: movie.title,
-                Year: getYear(movie.release_date),
+                Title: title,
+                Year: year,
                 imdbID: "",
-                Plot: movie.overview,
-                Poster: getPosterUrl(movie.poster_path)
+                Plot: overview,
+                Poster: poster
               })})' class='danflix-button'>
                 Request
               </button>
@@ -719,7 +466,6 @@
       resultsContainer.innerHTML = "<p>Search error.</p>";
     }
   }
-
   async function requestMovie(movie) {
     const user = await getCurrentUser();
     if (!user) {
@@ -760,10 +506,7 @@
       alert("Error submitting request: " + text);
     }
   }
-
-  // Report Issue Modal logic
   let reportMovieData = null;
-
   function openReportIssueModal(movie) {
     reportMovieData = movie;
     document.getElementById("reportMovieTitle").innerText = `${movie.title || movie.Title} (${getYear(movie.release_date || movie.Year)})`;
@@ -772,24 +515,20 @@
     document.getElementById("reportIssueError").style.display = "none";
     document.getElementById("reportIssueModal").style.display = "flex";
   }
-
   function closeReportIssueModal() {
     document.getElementById("reportIssueModal").style.display = "none";
     document.getElementById("reportIssueError").style.display = "none";
     reportMovieData = null;
   }
-
   async function submitReportIssue() {
     const type = document.getElementById("reportIssueType").value;
     const desc = document.getElementById("reportIssueDesc").value.trim();
     const errorDiv = document.getElementById("reportIssueError");
-
     if (!type) {
       errorDiv.innerText = "Please select an issue type.";
       errorDiv.style.display = "block";
       return;
     }
-
     const user = await getCurrentUser();
     if (!user) {
       closeReportIssueModal();
@@ -797,11 +536,8 @@
       showAuthOverlay();
       return;
     }
-
-    // Build report object
     const movieTitle = reportMovieData.title || reportMovieData.Title;
     const movieYear = getYear(reportMovieData.release_date || reportMovieData.Year);
-
     const res = await fetch(`${SUPABASE_URL}/rest/v1/requests`, {
       method: "POST",
       headers: {
@@ -830,7 +566,6 @@
       errorDiv.style.display = "block";
     }
   }
-
   window.onload = async function() {
     const { data } = await supabase.auth.getUser();
     if (data?.user) {
