@@ -365,7 +365,7 @@
               <span class="score"><img src="${IMDB_ICON}" alt="IMDb" title="TMDb Average" />${imdbRating}</span>
             </div>
             <p>${movie.overview || "No description available."}</p>
-            <button class='danflix-button' disabled>On DanFlix</button>
+            <button class='danflix-button' disabled>On Danflix</button>
             <button class='danflix-button report-issue-btn' onclick='openReportIssueModal(${JSON.stringify({
               title: movie.title,
               release_date: movie.release_date,
@@ -464,7 +464,7 @@
                 </span>
               </div>
               <p>${overview}</p>
-              <button class='danflix-button' disabled>On DanFlix</button>
+              <button class='danflix-button' disabled>On Danflix</button>
               <button class='danflix-button report-issue-btn' onclick='openReportIssueModal(${JSON.stringify({
                 title: title,
                 release_date: item.release_date || item.first_air_date,
