@@ -144,7 +144,6 @@
   <div id="authOverlay">
     <div class="auth-box">
       <img src="Danflix.png" alt="Danflix Logo" class="auth-logo"/>
-      <!-- Added welcome message below -->
       <div id="welcomeMsg" style="color: #fff; background: #222; padding: 0.7rem 1rem; border-radius: 7px; margin-bottom: 1.1rem; box-shadow: 0 2px 8px #e5091420; border: 1.5px solid #e50914;">
         Welcome to Danflix Request Movie or Report Issue page.<br>
       </div>
@@ -226,7 +225,7 @@
       email,
       password,
       options: {
-        emailRedirectTo: window.location.origin // redirect after email confirmation
+        emailRedirectTo: window.location.origin
       }
     });
     if (error) {
@@ -287,6 +286,29 @@
   function normalizeSearchText(s) {
     return s ? s.replace(/[^a-zA-Z0-9]/g, "").toLowerCase() : "";
   }
+  function normalizeTitle(title) {
+    return title.replace(/\s*[\(\[\{].*?[\)\]\}]\s*/g, '').trim().toLowerCase();
+  }
+  function isOnPlex(title, year) {
+    if (!plexReady) return false;
+    const normTitle = normalizeTitle(title);
+    const normYear = year ? String(year) : "";
+    // Check if any Plex title matches BOTH normalized title and year
+    return plexTitles.some(plexTitle => {
+      // Try to extract year from Plex title (format: "Title (Year)" or "Title")
+      const match = plexTitle.match(/^(.*?)(?:\s*\((\d{4})\))?$/);
+      if (!match) return false;
+      const plexNormTitle = normalizeTitle(match[1]);
+      const plexYear = match[2] ? String(match[2]) : "";
+      return plexNormTitle === normTitle && plexYear === normYear;
+    });
+  }
+  function getPosterUrl(path) {
+    return path ? `https://image.tmdb.org/t/p/w300${path}` : 'https://placehold.co/100x150?text=No+Image';
+  }
+  function getYear(date) {
+    return date ? date.split('-')[0] : '';
+  }
   async function fetchPlexTitles() {
     try {
       const res = await fetch("plex_titles.json");
@@ -297,20 +319,6 @@
       alert("Could not load Plex titles list. 'On Danflix' status may not be accurate.");
     }
   }
-  function normalizeTitle(title) {
-    return title.replace(/\s*[\(\[\{].*?[\)\]\}]\s*/g, '').trim().toLowerCase();
-  }
-  function isOnPlex(title) {
-    if (!plexReady) return false;
-    const normTitle = normalizeTitle(title);
-    return plexTitles.some(plexTitle => normalizeTitle(plexTitle) === normTitle);
-  }
-  function getPosterUrl(path) {
-    return path ? `https://image.tmdb.org/t/p/w300${path}` : 'https://placehold.co/100x150?text=No+Image';
-  }
-  function getYear(date) {
-    return date ? date.split('-')[0] : '';
-  }
   async function fetchRandomMovies() {
     const container = document.getElementById("randomMovies");
     container.innerHTML = "<p></p>";
@@ -318,20 +326,32 @@
       container.innerHTML = "<p></p>";
       return;
     }
-    // Always show 4 random movies from Plex
     let shuffled = plexTitles.sort(() => Math.random() - 0.5);
     let shown = 0;
     let tries = 0;
     container.innerHTML = "";
     for (let i = 0; shown < 4 && tries < shuffled.length * 3; i++, tries++) {
-      if (i >= shuffled.length) i = 0; // Loop over shuffled list again if needed
+      if (i >= shuffled.length) i = 0;
       const title = shuffled[i];
+      // Try to extract year from title: "Title (Year)"
+      const match = title.match(/^(.*?)(?:\s*\((\d{4})\))?$/);
+      const prettyTitle = match ? match[1].trim() : title;
+      const year = match && match[2] ? match[2] : "";
       try {
         const tmdbRes = await fetch(
-          `https://api.themoviedb.org/3/search/movie?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(title)}`
+          `https://api.themoviedb.org/3/search/movie?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(prettyTitle)}`
         );
         const tmdbData = await tmdbRes.json();
-        const movie = tmdbData.results && tmdbData.results[0];
+        // Prefer match with same year if available
+        let movie = null;
+        if (tmdbData.results && tmdbData.results.length > 0) {
+          if (year) {
+            movie = tmdbData.results.find(m => getYear(m.release_date) === year);
+          }
+          if (!movie) {
+            movie = tmdbData.results[0];
+          }
+        }
         if (!movie) continue;
         if (movie.vote_count < 250 || movie.popularity < 10) continue;
         const imdbRating = movie.vote_average ? movie.vote_average.toFixed(1) : "N/A";
@@ -359,7 +379,6 @@
         continue;
       }
     }
-    // If less than 4 found (due to strict filtering), show less but always try to show 4 if possible!
   }
   async function searchMovies() {
     const query = document.getElementById("searchInput").value.trim();
@@ -430,7 +449,7 @@
         let year = item.media_type === 'movie' ? getYear(item.release_date) : getYear(item.first_air_date);
         let overview = item.overview || "No description available.";
         let poster = getPosterUrl(item.poster_path);
-        let alreadyOnPlex = isOnPlex(title);
+        let alreadyOnPlex = isOnPlex(title, year);
         let imdbRating = item.vote_average ? item.vote_average.toFixed(1) : "N/A";
         let div = document.createElement("div");
         div.className = "movie";
@@ -492,8 +511,8 @@
       alert("Please wait for Plex titles to load before requesting.");
       return;
     }
-    if (isOnPlex(movie.Title)) {
-      alert(`"${movie.Title}" is already on Danflix!`);
+    if (isOnPlex(movie.Title, movie.Year)) {
+      alert(`"${movie.Title}" (${movie.Year}) is already on Danflix!`);
       return;
     }
     const res = await fetch(`${SUPABASE_URL}/rest/v1/requests`, {
@@ -595,4 +614,3 @@
 </script>
 </body>
 </html>
-
