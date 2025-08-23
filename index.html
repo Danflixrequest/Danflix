@@ -144,6 +144,10 @@
   <div id="authOverlay">
     <div class="auth-box">
       <img src="Danflix.png" alt="Danflix Logo" class="auth-logo"/>
+      <!-- Added welcome message below -->
+      <div id="welcomeMsg" style="color: #fff; background: #222; padding: 0.7rem 1rem; border-radius: 7px; margin-bottom: 1.1rem; box-shadow: 0 2px 8px #e5091420; border: 1.5px solid #e50914;">
+        Welcome to Danflix Request Movie or Report Issue page.<br>
+      </div>
       <div id="authForms">
         <div id="loginForm">
           <h2 style="color:#e50914; margin-bottom:1rem; letter-spacing:1px;">Login</h2>
@@ -218,7 +222,13 @@
     document.getElementById('signupError').style.display = "none";
     const email = document.getElementById('signupEmail').value;
     const password = document.getElementById('signupPassword').value;
-    const { error } = await supabase.auth.signUp({ email, password });
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: window.location.origin // redirect after email confirmation
+      }
+    });
     if (error) {
       document.getElementById('signupError').innerText = error.message;
       document.getElementById('signupError').style.display = "block";
@@ -303,13 +313,19 @@
   }
   async function fetchRandomMovies() {
     const container = document.getElementById("randomMovies");
+    container.innerHTML = "<p></p>";
     if (!plexReady || !plexTitles.length) {
       container.innerHTML = "<p></p>";
       return;
     }
-    container.innerHTML = "<p></p>";
-    const shuffled = plexTitles.sort(() => Math.random() - 0.5).slice(0, 6);
-    for (const title of shuffled) {
+    // Always show 4 random movies from Plex
+    let shuffled = plexTitles.sort(() => Math.random() - 0.5);
+    let shown = 0;
+    let tries = 0;
+    container.innerHTML = "";
+    for (let i = 0; shown < 4 && tries < shuffled.length * 3; i++, tries++) {
+      if (i >= shuffled.length) i = 0; // Loop over shuffled list again if needed
+      const title = shuffled[i];
       try {
         const tmdbRes = await fetch(
           `https://api.themoviedb.org/3/search/movie?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(title)}`
@@ -338,10 +354,12 @@
             })})'>Report Issue</button>
           </div>`;
         container.appendChild(div);
+        shown++;
       } catch (err) {
         continue;
       }
     }
+    // If less than 4 found (due to strict filtering), show less but always try to show 4 if possible!
   }
   async function searchMovies() {
     const query = document.getElementById("searchInput").value.trim();
@@ -377,11 +395,9 @@
       function getMatchScore(item) {
         const rawTitle = item.media_type === 'movie' ? item.title : item.name;
         const normTitle = normalizeSearchText(rawTitle);
-        // Highest priority: exact match, then startsWith, then includes, then popularity/votes
         if (normTitle === normTerm) return 100;
         if (normTitle.startsWith(normTerm)) return 90;
         if (normTitle.includes(normTerm)) return 75;
-        // If year is specified in query, check for year match
         let yearFromInput = null;
         const yearMatch = query.match(/\b(19|20)\d{2}\b/);
         if (yearMatch) yearFromInput = yearMatch[0];
@@ -398,7 +414,6 @@
 
       allResults.sort((a, b) => {
         if (b._matchScore !== a._matchScore) return b._matchScore - a._matchScore;
-        // For same score prefer most votes/popularity
         if ((b.vote_count || 0) !== (a.vote_count || 0)) return (b.vote_count || 0) - (a.vote_count || 0);
         return (b.popularity || 0) - (a.popularity || 0);
       });
