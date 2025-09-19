@@ -173,7 +173,7 @@
   </div>
   <div id="pageContent">
     <img id="logo" src="Danflix.png" alt="Danflix Logo" />
-    <input id="searchInput" placeholder="Search for a title..." oninput="searchMovies()" />
+    <input id="searchInput" placeholder="Search for a title or actor..." oninput="searchMovies()" />
     <div class="section-title">DanFlix Suggestions</div>
     <div id="randomMovies"></div>
     <div id="results"></div>
@@ -397,6 +397,7 @@
     randomMovies.style.display = 'none';
     resultsContainer.innerHTML = "<p></p>";
     try {
+      // 1. Search for movies and TV shows
       const [movieRes, tvRes] = await Promise.all([
         fetch(`https://api.themoviedb.org/3/search/movie?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(query)}`),
         fetch(`https://api.themoviedb.org/3/search/tv?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(query)}`)
@@ -439,63 +440,130 @@
 
       allResults = allResults.slice(0, 10);
 
-      if (allResults.length === 0) {
-        resultsContainer.innerHTML = "<p>No results found.</p>";
+      if (allResults.length > 0) {
+        for (const item of allResults) {
+          let title = item.media_type === 'movie' ? item.title : item.name;
+          let year = item.media_type === 'movie' ? getYear(item.release_date) : getYear(item.first_air_date);
+          let overview = item.overview || "No description available.";
+          let poster = getPosterUrl(item.poster_path);
+          let alreadyOnPlex = isOnPlex(title, year);
+          let imdbRating = item.vote_average ? item.vote_average.toFixed(1) : "N/A";
+          let div = document.createElement("div");
+          div.className = "movie";
+          if (alreadyOnPlex) {
+            div.innerHTML = `
+              <img src="${poster}" />
+              <div>
+                <h3>${highlightMatch(title)} (${year}) ${item.media_type === 'tv' ? '<span style="background:#e50914;color:#fff;border-radius:3px;padding:0 3px;font-size:0.95em;">TV</span>' : ''}</h3>
+                <div class="ratings">
+                  <span class="score">
+                    <img src="${IMDB_ICON}" alt="IMDb" title="TMDb Average" />${imdbRating}
+                  </span>
+                </div>
+                <p>${overview}</p>
+                <button class='danflix-button' disabled>On Danflix</button>
+                <button class='danflix-button report-issue-btn' onclick='openReportIssueModal(${JSON.stringify({
+                  title: title,
+                  release_date: item.release_date || item.first_air_date,
+                  imdbID: item.imdbID || "",
+                  poster: poster
+                })})'>Report Issue</button>
+              </div>`;
+          } else {
+            div.innerHTML = `
+              <img src="${poster}" />
+              <div>
+                <h3>${highlightMatch(title)} (${year}) ${item.media_type === 'tv' ? '<span style="background:#e50914;color:#fff;border-radius:3px;padding:0 3px;font-size:0.95em;">TV</span>' : ''}</h3>
+                <div class="ratings">
+                  <span class="score">
+                    <img src="${IMDB_ICON}" alt="IMDb" title="TMDb Average" />${imdbRating}
+                  </span>
+                </div>
+                <p>${overview}</p>
+                <button onclick='requestMovie(${JSON.stringify({
+                  Title: title,
+                  Year: year,
+                  imdbID: "",
+                  Plot: overview,
+                  Poster: poster
+                })})' class='danflix-button'>
+                  Request
+                </button>
+              </div>`;
+          }
+          resultsContainer.appendChild(div);
+        }
         return;
       }
 
-      for (const item of allResults) {
-        let title = item.media_type === 'movie' ? item.title : item.name;
-        let year = item.media_type === 'movie' ? getYear(item.release_date) : getYear(item.first_air_date);
-        let overview = item.overview || "No description available.";
-        let poster = getPosterUrl(item.poster_path);
-        let alreadyOnPlex = isOnPlex(title, year);
-        let imdbRating = item.vote_average ? item.vote_average.toFixed(1) : "N/A";
-        let div = document.createElement("div");
-        div.className = "movie";
-        if (alreadyOnPlex) {
-          div.innerHTML = `
-            <img src="${poster}" />
-            <div>
-              <h3>${highlightMatch(title)} (${year}) ${item.media_type === 'tv' ? '<span style="background:#e50914;color:#fff;border-radius:3px;padding:0 3px;font-size:0.95em;">TV</span>' : ''}</h3>
-              <div class="ratings">
-                <span class="score">
-                  <img src="${IMDB_ICON}" alt="IMDb" title="TMDb Average" />${imdbRating}
-                </span>
-              </div>
-              <p>${overview}</p>
-              <button class='danflix-button' disabled>On Danflix</button>
-              <button class='danflix-button report-issue-btn' onclick='openReportIssueModal(${JSON.stringify({
-                title: title,
-                release_date: item.release_date || item.first_air_date,
-                imdbID: item.imdbID || "",
-                poster: poster
-              })})'>Report Issue</button>
-            </div>`;
-        } else {
-          div.innerHTML = `
-            <img src="${poster}" />
-            <div>
-              <h3>${highlightMatch(title)} (${year}) ${item.media_type === 'tv' ? '<span style="background:#e50914;color:#fff;border-radius:3px;padding:0 3px;font-size:0.95em;">TV</span>' : ''}</h3>
-              <div class="ratings">
-                <span class="score">
-                  <img src="${IMDB_ICON}" alt="IMDb" title="TMDb Average" />${imdbRating}
-                </span>
-              </div>
-              <p>${overview}</p>
-              <button onclick='requestMovie(${JSON.stringify({
-                Title: title,
-                Year: year,
-                imdbID: "",
-                Plot: overview,
-                Poster: poster
-              })})' class='danflix-button'>
-                Request
-              </button>
-            </div>`;
+      // 2. If no movie/tv results, try searching for a person (actor)
+      const personRes = await fetch(`https://api.themoviedb.org/3/search/person?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(query)}`);
+      const personData = await personRes.json();
+      if (personData.results && personData.results.length > 0) {
+        const person = personData.results[0];  // pick the top result
+        // Now fetch their credits
+        const creditsRes = await fetch(`https://api.themoviedb.org/3/person/${person.id}/combined_credits?api_key=${TMDB_API_KEY}`);
+        const creditsData = await creditsRes.json();
+        const credits = creditsData.cast || [];
+        if (credits.length === 0) {
+          resultsContainer.innerHTML = `<p>No results found for actor "${query}".</p>`;
+          return;
         }
-        resultsContainer.appendChild(div);
+        resultsContainer.innerHTML = `<h3 style="color:#e50914;">Results for actor: ${person.name}</h3>`;
+        for (const item of credits.sort((a,b) => (b.popularity||0)-(a.popularity||0)).slice(0, 20)) {
+          let title = item.title || item.name;
+          let year = getYear(item.release_date || item.first_air_date);
+          let poster = getPosterUrl(item.poster_path);
+          let overview = item.overview || "No description available.";
+          let alreadyOnPlex = isOnPlex(title, year);
+          let imdbRating = item.vote_average ? item.vote_average.toFixed(1) : "N/A";
+          let div = document.createElement("div");
+          div.className = "movie";
+          if (alreadyOnPlex) {
+            div.innerHTML = `
+              <img src="${poster}" />
+              <div>
+                <h3>${highlightMatch(title)} (${year}) ${item.media_type === 'tv' ? '<span style="background:#e50914;color:#fff;border-radius:3px;padding:0 3px;font-size:0.95em;">TV</span>' : ''}</h3>
+                <div class="ratings">
+                  <span class="score">
+                    <img src="${IMDB_ICON}" alt="IMDb" title="TMDb Average" />${imdbRating}
+                  </span>
+                </div>
+                <p>${overview}</p>
+                <button class='danflix-button' disabled>On Danflix</button>
+                <button class='danflix-button report-issue-btn' onclick='openReportIssueModal(${JSON.stringify({
+                  title: title,
+                  release_date: item.release_date || item.first_air_date,
+                  imdbID: item.imdbID || "",
+                  poster: poster
+                })})'>Report Issue</button>
+              </div>`;
+          } else {
+            div.innerHTML = `
+              <img src="${poster}" />
+              <div>
+                <h3>${highlightMatch(title)} (${year}) ${item.media_type === 'tv' ? '<span style="background:#e50914;color:#fff;border-radius:3px;padding:0 3px;font-size:0.95em;">TV</span>' : ''}</h3>
+                <div class="ratings">
+                  <span class="score">
+                    <img src="${IMDB_ICON}" alt="IMDb" title="TMDb Average" />${imdbRating}
+                  </span>
+                </div>
+                <p>${overview}</p>
+                <button onclick='requestMovie(${JSON.stringify({
+                  Title: title,
+                  Year: year,
+                  imdbID: "",
+                  Plot: overview,
+                  Poster: poster
+                })})' class='danflix-button'>Request</button>
+              </div>`;
+          }
+          resultsContainer.appendChild(div);
+        }
+        return;
       }
+      // If nothing found at all
+      resultsContainer.innerHTML = "<p>No results found.</p>";
     } catch (err) {
       resultsContainer.innerHTML = "<p>Search error.</p>";
     }
