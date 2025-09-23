@@ -473,26 +473,26 @@
               }))}'>Report Issue</button>
             </div>`;
         } else {
-          div.innerHTML = `
-            <img src="${poster}" />
-            <div>
-              <h3>${highlightMatch(title)} (${year}) ${item.media_type === 'tv' ? '<span style="background:#e50914;color:#fff;border-radius:3px;padding:0 3px;font-size:0.95em;">TV</span>' : ''}</h3>
-              <div class="ratings">
-                <span class="score">
-                  <img src="${IMDB_ICON}" alt="IMDb" title="TMDb Average" />${imdbRating}
-                </span>
-              </div>
-              <p>${overview}</p>
-              <button onclick='requestMovieFromAttr(this)' data-movie='${encodeURIComponent(JSON.stringify({
-                Title: title,
-                Year: year,
-                imdbID: "",
-                Plot: overview,
-                Poster: poster
-              }))}' class='danflix-button'>
-                Request
-              </button>
-            </div>`;
+div.innerHTML = `
+  <img src="${poster}" />
+  <div>
+    <h3>${highlightMatch(title)} (${year}) ${item.media_type === 'tv' ? '<span style="background:#e50914;color:#fff;border-radius:3px;padding:0 3px;font-size:0.95em;">TV</span>' : ''}</h3>
+    <div class="ratings">
+      <span class="score">
+        <img src="${IMDB_ICON}" alt="IMDb" title="TMDb Average" />${imdbRating}
+      </span>
+    </div>
+    <p>${overview}</p>
+    <button onclick="requestMovieFromAttr(this)" data-movie="${encodeURIComponent(JSON.stringify({
+      Title: title,
+      Year: year,
+      imdbID: "",
+      Plot: overview,
+      Poster: poster
+    }))}" class="danflix-button">
+      Request
+    </button>
+  </div>`;
         }
         resultsContainer.appendChild(div);
       }
@@ -641,3 +641,4 @@
 </script>
 </body>
 </html>
+
